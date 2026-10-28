@@ -14,11 +14,12 @@
 <link rel="icon" href="icon-180.png?v=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-/* Black camera-app shell: logo bar on top, scrolling photo feed, shutter dock pinned to the bottom */
+/* Black camera-app shell: logo bar, today summary, project groups below; shutter dock pinned to bottom; full-screen camera overlay */
 :root {
   --bg: #000;
   --panel: #121212;
   --panel-2: #1c1c1e;
+  --panel-3: #2c2c2e;
   --line: #2a2a2c;
   --fg: #f5f5f7;
   --muted: #8e8e93;
@@ -29,80 +30,146 @@
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
   --gutter: max(16px, env(safe-area-inset-left, 0px));
   --gutter-r: max(16px, env(safe-area-inset-right, 0px));
-  --dock-h: calc(116px + env(safe-area-inset-bottom, 0px));
+  --sb: env(safe-area-inset-bottom, 0px);
+  --st: env(safe-area-inset-top, 0px);
+  --dock-h: calc(112px + var(--sb));
   color-scheme: dark;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
-body { font-family: var(--font); font-size: clamp(14px, 3.9vw, 16px); line-height: 1.45; -webkit-font-smoothing: antialiased;
-  overscroll-behavior: none; }
+body { font-family: var(--font); font-size: clamp(14px, 3.9vw, 16px); line-height: 1.45; -webkit-font-smoothing: antialiased; overscroll-behavior: none; }
 [hidden] { display: none !important; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-button:focus-visible, select:focus-visible + .store-pill, label:focus-visible { outline: 2px solid var(--stamp); outline-offset: 3px; }
+button:focus-visible, label:focus-visible, input:focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
 input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+svg { display: block; }
 
 /* Top bar */
 .top { position: sticky; top: 0; z-index: 5; background: rgba(0,0,0,.82); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-  padding: calc(env(safe-area-inset-top, 0px) + 12px) var(--gutter-r) 12px var(--gutter);
+  padding: calc(var(--st) + 12px) var(--gutter-r) 12px var(--gutter);
   display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); }
 .logo { height: clamp(26px, 7vw, 32px); width: auto; display: block; }
-.store { position: relative; display: block; flex: none; min-width: 0; }
+.store { position: relative; display: block; flex: none; }
 .store select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
-.store-pill { display: inline-flex; flex-direction: row; align-items: center; gap: 6px; padding: 8px 12px 8px 14px; border-radius: 999px; background: var(--panel-2);
-  font-weight: 600; font-size: 0.94em; white-space: nowrap; max-width: 58vw; }
+.store-pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px 8px 14px; border-radius: 999px; background: var(--panel-2);
+  font-weight: 600; font-size: .94em; white-space: nowrap; max-width: 58vw; }
 .store-pill span { overflow: hidden; text-overflow: ellipsis; }
 .store-pill.unset { color: var(--stamp); box-shadow: inset 0 0 0 1px var(--stamp); background: transparent; }
 .store-pill svg { flex: none; width: 14px; height: 14px; opacity: .7; }
 
-/* Feed */
-.feed { padding: 18px var(--gutter-r) calc(var(--dock-h) + 24px) var(--gutter); display: grid; gap: 18px;
-  max-width: 720px; margin: 0 auto; }
-.empty { padding: 8vh 4px 0; display: grid; gap: 28px; }
-.today { font-family: var(--mono); color: var(--stamp); font-size: 0.85em; letter-spacing: .08em; }
-.empty h1 { font-size: clamp(26px, 8vw, 34px); line-height: 1.2; margin: 6px 0 0; letter-spacing: -0.03em; font-weight: 700; text-wrap: balance; }
-.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; border-radius: 16px; overflow: hidden; }
-.steps li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; background: var(--panel); padding: 14px 16px; }
-.steps b { font-family: var(--mono); color: var(--muted); font-weight: 500; font-size: .9em; padding-top: 1px; }
-.steps p { margin: 0; } .steps small { color: var(--muted); display: block; font-size: .85em; margin-top: 2px; }
+/* Main */
+.main { max-width: 760px; margin: 0 auto; padding: 22px var(--gutter-r) calc(var(--dock-h) + 28px) var(--gutter); display: grid; gap: 22px; }
+.hero { display: grid; gap: 6px; padding: 4px 2px 0; }
+.today { font-family: var(--mono); color: var(--stamp); font-size: .85em; letter-spacing: .08em; }
+.hero h1 { font-size: clamp(26px, 8vw, 34px); line-height: 1.2; margin: 0; letter-spacing: -0.03em; font-weight: 700; text-wrap: balance; }
+.hero p { margin: 4px 0 0; color: var(--muted); font-size: .92em; }
 
-.shot { position: relative; border-radius: 18px; overflow: hidden; background: var(--panel); }
-.shot img { display: block; width: 100%; height: auto; -webkit-touch-callout: default; }
-.shot .bar { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 16px; }
-.shot .info { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.shot .fname { font-size: .85em; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shot .size { font-family: var(--mono); font-size: .82em; font-variant-numeric: tabular-nums; }
-.shot .size s { color: var(--muted); } .shot .size em { font-style: normal; color: var(--ok); margin-left: 6px; }
-.save { flex: none; display: flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 999px; background: var(--fg); color: #000;
-  font-weight: 700; font-size: .92em; }
-.save svg { width: 16px; height: 16px; }
-.save.done { background: var(--panel-2); color: var(--ok); }
-.shot .msg { margin: 0; padding: 0 16px 12px; font-size: .82em; color: var(--err); }
-.shot.busy { aspect-ratio: 4 / 3; display: grid; place-items: center; color: var(--muted); font-size: .9em;
-  background: linear-gradient(100deg, var(--panel) 30%, var(--panel-2) 50%, var(--panel) 70%) 0 0 / 300% 100%; animation: shimmer 1.4s linear infinite; }
-@keyframes shimmer { to { background-position: -150% 0; } }
+.toolbar { position: sticky; top: calc(var(--st) + 61px); z-index: 4; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 0; background: var(--bg); }
+.toolbar .count { flex: 1; min-width: 0; font-weight: 600; }
+.toolbar .count small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+.chip { padding: 7px 12px; border-radius: 999px; background: var(--panel-2); font-size: .86em; font-weight: 600; white-space: nowrap; }
+.chip.danger { color: var(--err); }
+.chip:disabled { opacity: .35; }
+.newproj { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 14px; border: 1px dashed var(--panel-3);
+  color: var(--muted); font-weight: 600; }
+.newproj svg { width: 18px; height: 18px; }
+
+.groups { display: grid; gap: 26px; }
+.group { display: grid; gap: 10px; }
+.ghead { display: flex; align-items: center; gap: 10px; }
+.gcheck { flex: none; width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--panel-3); display: grid; place-items: center; }
+.gcheck.on { background: var(--stamp); box-shadow: none; color: #000; }
+.gcheck.part { box-shadow: inset 0 0 0 2px var(--stamp); }
+.gcheck svg { width: 15px; height: 15px; opacity: 0; } .gcheck.on svg { opacity: 1; }
+.gname { flex: 1; min-width: 0; font: inherit; font-size: 1.08em; font-weight: 700; color: var(--fg); background: transparent; border: 0; padding: 6px 2px;
+  border-bottom: 1px solid transparent; border-radius: 0; letter-spacing: -0.01em; }
+.gname::placeholder { color: var(--fg); opacity: 1; }
+.gname:focus { outline: none; border-bottom-color: var(--stamp); }
+.gname:focus::placeholder { color: var(--muted); }
+.gdate { flex: none; font-family: var(--mono); font-size: .82em; color: var(--muted); font-variant-numeric: tabular-nums; }
+.gdate.is-today { color: var(--stamp); }
+.gadd { flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--panel-2); display: grid; place-items: center; }
+.gadd svg { width: 18px; height: 18px; }
+.gmeta { font-size: .8em; color: var(--muted); margin: -4px 0 0 36px; }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; border-radius: 14px; overflow: hidden; }
+@media (min-width: 560px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+.thumb { position: relative; aspect-ratio: 1; background: var(--panel); overflow: hidden; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s, opacity .15s; pointer-events: none; }
+.thumb .tick { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.9), 0 0 0 1px rgba(0,0,0,.25);
+  background: rgba(0,0,0,.15); display: grid; place-items: center; color: #000; }
+.thumb .tick svg { width: 13px; height: 13px; opacity: 0; }
+.thumb.sel .tick { background: var(--stamp); box-shadow: 0 0 0 2px #000; } .thumb.sel .tick svg { opacity: 1; }
+.thumb.sel img { transform: scale(.9); border-radius: 8px; }
+.thumb .saved { position: absolute; left: 6px; bottom: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.6); color: var(--ok); }
+.thumb.pending img { opacity: .4; }
+
+.emptylist { padding: 26px 18px; border-radius: 16px; background: var(--panel); display: grid; gap: 10px; }
+.emptylist ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); }
+.emptylist b { color: var(--fg); font-weight: 600; }
 
 /* Dock */
 .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; height: var(--dock-h);
-  padding: 14px var(--gutter-r) env(safe-area-inset-bottom, 0px) var(--gutter);
-  background: linear-gradient(to top, #000 62%, rgba(0,0,0,0));
+  padding: 12px var(--gutter-r) var(--sb) var(--gutter); background: linear-gradient(to top, #000 64%, rgba(0,0,0,0));
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
-.side { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: .74em; color: var(--muted); justify-self: center; }
+.side { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: .74em; color: var(--muted); justify-self: center; cursor: pointer; }
 .side .ico { width: 48px; height: 48px; border-radius: 14px; background: var(--panel-2); display: grid; place-items: center; color: var(--fg); position: relative; }
 .side .ico svg { width: 22px; height: 22px; }
-.side .badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--stamp);
+.side.primary .ico { background: var(--fg); color: #000; }
+.badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--stamp);
   color: #000; font-size: 11px; font-weight: 800; display: grid; place-items: center; }
 .side:disabled { opacity: .35; }
-.shutter { width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
-  box-shadow: inset 0 0 0 4px var(--fg); }
-.shutter i { width: 62px; height: 62px; border-radius: 50%; background: var(--fg); transition: transform .12s; }
-.shutter:active i { transform: scale(.9); }
-.shutter.working i { background: var(--panel-2); animation: pulse 1s ease-in-out infinite; }
-@keyframes pulse { 50% { transform: scale(.88); } }
+.shutter { width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; box-shadow: inset 0 0 0 4px var(--fg); }
+.shutter i { width: 62px; height: 62px; border-radius: 50%; background: var(--fg); transition: transform .1s; }
+.shutter:active i { transform: scale(.88); }
 
-.toast { position: fixed; left: 50%; bottom: calc(var(--dock-h) + 8px); transform: translateX(-50%); z-index: 7;
-  background: var(--panel-2); color: var(--fg); padding: 10px 16px; border-radius: 999px; font-size: .88em; white-space: nowrap;
-  box-shadow: 0 6px 24px rgba(0,0,0,.6); }
-@media (prefers-reduced-motion: reduce) { .shot.busy, .shutter.working i { animation: none; } }
+/* Camera overlay */
+.cam { position: fixed; inset: 0; z-index: 20; background: #000; display: grid; grid-template-rows: auto 1fr auto; }
+.cam-top { padding: calc(var(--st) + 10px) var(--gutter-r) 10px var(--gutter); display: flex; align-items: center; gap: 10px; z-index: 2; }
+.cam-proj { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; background: rgba(28,28,30,.85); border-radius: 12px; padding: 4px 6px 4px 12px; }
+.cam-proj span { font-size: .75em; color: var(--stamp); font-weight: 700; white-space: nowrap; }
+.cam-proj input { flex: 1; min-width: 0; font: inherit; font-weight: 600; color: var(--fg); background: transparent; border: 0; padding: 6px 0; }
+.cam-proj input::placeholder { color: var(--fg); opacity: .9; }
+.cam-proj input:focus { outline: none; } .cam-proj input:focus::placeholder { color: var(--muted); }
+.cam-native { flex: none; font-size: .68em; line-height: 1.15; text-align: center; color: var(--fg); background: rgba(28,28,30,.85);
+  border-radius: 12px; padding: 7px 9px; cursor: pointer; font-weight: 600; }
+.cam-x { width: 40px; height: 40px; border-radius: 50%; background: rgba(28,28,30,.85); display: grid; place-items: center; flex: none; }
+.cam-x svg { width: 18px; height: 18px; }
+.viewport { position: relative; overflow: hidden; display: grid; place-items: center; min-height: 0; }
+.viewport video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.cam-msg { position: absolute; inset: auto 16px 50% 16px; transform: translateY(50%); text-align: center; color: var(--muted); display: grid; gap: 14px; justify-items: center; }
+.cam-msg .chip { color: var(--fg); }
+.res { position: absolute; left: 12px; bottom: 10px; font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,.55); }
+.cam-bottom { padding: 10px var(--gutter-r) calc(var(--sb) + 14px) var(--gutter); display: grid; gap: 14px; }
+.tray { display: flex; gap: 6px; overflow-x: auto; min-height: 56px; scrollbar-width: none; padding: 2px 0; }
+.tray::-webkit-scrollbar { display: none; }
+.tray img { flex: none; width: 52px; height: 52px; object-fit: cover; border-radius: 8px; background: var(--panel-2); }
+.tray .hint { color: var(--muted); font-size: .82em; align-self: center; }
+.cam-ctrl { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.cam-count { justify-self: center; font-family: var(--mono); font-size: .9em; color: var(--muted); text-align: center; line-height: 1.2; }
+.cam-count b { display: block; color: var(--fg); font-size: 1.5em; font-family: var(--font); }
+.done { justify-self: center; padding: 12px 22px; border-radius: 999px; background: var(--stamp); color: #000; font-weight: 800; }
+.flyer { position: fixed; z-index: 30; object-fit: cover; pointer-events: none; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+
+/* Sheet + viewer + toast */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.6); display: grid; align-items: end; }
+.sheet { background: var(--panel-2); border-radius: 20px 20px 0 0; padding: 22px var(--gutter-r) calc(var(--sb) + 18px) var(--gutter); display: grid; gap: 14px; }
+.sheet h2 { margin: 0; font-size: 1.15em; } .sheet p { margin: 0; color: var(--muted); }
+.sheet .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.sheet .btns button { padding: 14px; border-radius: 14px; background: var(--panel-3); font-weight: 700; }
+.sheet .btns .del { background: var(--err); color: #000; }
+.viewer { position: fixed; inset: 0; z-index: 35; background: #000; display: grid; grid-template-rows: auto 1fr auto; }
+.viewer .vtop { padding: calc(var(--st) + 10px) var(--gutter-r) 10px var(--gutter); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.viewer .vname { font-size: .85em; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.viewer .vimg { min-height: 0; display: grid; place-items: center; }
+.viewer .vimg img { max-width: 100%; max-height: 100%; object-fit: contain; -webkit-touch-callout: default; }
+.viewer .vbot { padding: 12px var(--gutter-r) calc(var(--sb) + 14px) var(--gutter); display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--mono); font-size: .82em; color: var(--muted); gap: 10px; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--dock-h) + 8px); transform: translateX(-50%); z-index: 50;
+  background: var(--panel-3); color: var(--fg); padding: 10px 16px; border-radius: 999px; font-size: .88em; white-space: nowrap; box-shadow: 0 6px 24px rgba(0,0,0,.6); }
+@media (prefers-reduced-motion: reduce) { .thumb img { transition: none; } }
 </style>
 </head>
 <body>
@@ -116,18 +183,26 @@ input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; poin
   </label>
 </header>
 
-<main class="feed" id="feed">
-  <section class="empty" id="empty">
-    <div>
-      <div class="today" id="today"></div>
-      <h1>매장 사진을<br>찍어 주세요</h1>
-    </div>
-    <ol class="steps">
-      <li><b>01</b><p>오른쪽 위에서 점포 선택<small>파일 이름에 점포명이 들어가요</small></p></li>
-      <li><b>02</b><p>가운데 버튼으로 촬영<small>오른쪽 아래에 촬영 날짜가 찍혀요</small></p></li>
-      <li><b>03</b><p>저장 → 이미지 저장<small>화질은 유지하고 용량은 약 1/5로 줄여요</small></p></li>
-    </ol>
+<main class="main">
+  <section class="hero">
+    <div class="today" id="today"></div>
+    <h1 id="heroTitle">매장 사진을<br>찍어 주세요</h1>
+    <p id="heroSub">가운데 버튼을 누르면 카메라가 열리고, 여러 장을 이어서 찍을 수 있어요.</p>
   </section>
+
+  <div class="toolbar" id="toolbar" hidden>
+    <span class="count" id="selCount"></span>
+    <button class="chip" id="selToday" type="button">오늘 전체</button>
+    <button class="chip" id="selAll" type="button">전체 선택</button>
+    <button class="chip danger" id="delBtn" type="button">삭제</button>
+  </div>
+
+  <button class="newproj" id="newProj" type="button" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    새 프로젝트로 촬영
+  </button>
+
+  <div class="groups" id="groups"></div>
 </main>
 
 <nav class="dock">
@@ -136,13 +211,51 @@ input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; poin
     <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg></span>
     앨범
   </label>
-  <input type="file" id="cam" accept="image/*" capture="environment">
-  <label class="shutter" id="shutter" for="cam" aria-label="촬영"><i></i></label>
-  <button class="side" id="saveAll" type="button" disabled>
-    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg><span class="badge" id="badge" hidden>0</span></span>
-    모두 저장
+  <button class="shutter" id="openCam" type="button" aria-label="카메라 열기"><i></i></button>
+  <button class="side primary" id="saveBtn" type="button" disabled>
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg><span class="badge" id="badge" hidden>0</span></span>
+    저장
   </button>
 </nav>
+
+<!-- Camera -->
+<section class="cam" id="cam" hidden>
+  <div class="cam-top">
+    <button class="cam-x" id="camClose" type="button" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <label class="cam-proj"><span id="camDate"></span><input id="camProjName" type="text" enterkeyhint="done" autocomplete="off" aria-label="프로젝트 이름"></label>
+    <label class="cam-native" for="nativeCam">기본<br>카메라</label>
+  </div>
+  <div class="viewport" id="viewport">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="flash" id="flash"></div>
+    <div class="cam-msg" id="camMsg" hidden></div>
+    <div class="res" id="res"></div>
+  </div>
+  <div class="cam-bottom">
+    <div class="tray" id="tray"><span class="hint">찍은 사진이 여기에 모여요</span></div>
+    <div class="cam-ctrl">
+      <div class="cam-count"><b id="camCount">0</b>장</div>
+      <button class="shutter" id="snap" type="button" aria-label="촬영"><i></i></button>
+      <button class="done" id="camDone" type="button">완료</button>
+    </div>
+  </div>
+  <input type="file" id="nativeCam" accept="image/*" capture="environment">
+</section>
+
+<div class="viewer" id="viewer" hidden>
+  <div class="vtop"><span class="vname" id="vName"></span>
+    <button class="cam-x" id="vClose" type="button" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="vimg"><img id="vImg" alt=""></div>
+  <div class="vbot"><span id="vInfo"></span><button class="chip" id="vSave" type="button">이 사진 저장</button></div>
+</div>
+
+<div class="scrim" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <h2 id="sheetTitle"></h2>
+    <p>삭제한 사진은 되돌릴 수 없어요. 사진 앱에 이미 저장한 사진은 그대로 남아요.</p>
+    <div class="btns"><button type="button" id="sheetNo">취소</button><button type="button" class="del" id="sheetYes">삭제</button></div>
+  </div>
+</div>
 
 <div class="toast" id="toast" hidden></div>
 
@@ -152,32 +265,83 @@ const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일�
 "김정훈 권역":["EM가든5점","EM경기광주점","EM구로점","EM남양주점","EM다산점","EM명일점","EM목동점","EM별내점","EM여주점","EM용산점","EM이천점","EM자양점","EM창동점","EM청계천점","EM춘천점","EM하남점"],
 "김종권 권역":["EM광산점","EM구미점","EM금정점","EM마산점","EM문현점","EM봉선점","EM사상점","EM서귀포점","EM성서점","EM순천점","EM양산점","EM여수점","EM연제점","EM울산점","EM칠성점","EM통영점","EM포항점"]};
 
-// Output settings: long edge 3024px (iPhone 12MP short side) at JPEG quality 0.88
-const MAX_EDGE = 3024, QUALITY = 0.88;
+// Output: long edge 3024px at JPEG quality 0.88; thumbnails 360px for the list
+const MAX_EDGE = 3024, QUALITY = 0.88, THUMB = 360;
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
+const CAMPLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>';
+const WEEK = ["일","월","화","수","목","금","토"];
 
 const $ = id => document.getElementById(id);
 const pad = n => String(n).padStart(2, "0");
 const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + "MB" : Math.round(b / 1024) + "KB";
 const ymd = d => `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayKey = () => dayKey(new Date());
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+function prettyDay(key) {
+  const [y, m, d] = key.split("-").map(Number), dt = new Date(y, m - 1, d);
+  const s = `${pad(m)}.${pad(d)} (${WEEK[dt.getDay()]})`;
+  return y === new Date().getFullYear() ? s : `${y}.${s}`;
+}
+const safeName = s => s.replace(/[\\/:*?"<>|]/g, "").trim();
 
-$("today").textContent = ymd(new Date());
+/* ---------- Storage (IndexedDB, stays on this phone) ---------- */
+let db;
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("storephoto", 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      d.createObjectStore("projects", { keyPath: "id" });
+      d.createObjectStore("photos", { keyPath: "id" }).createIndex("project", "projectId");
+    };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+function tx(store, mode, fn) {
+  return new Promise((res, rej) => {
+    const t = db.transaction(store, mode), s = t.objectStore(store); let out;
+    Promise.resolve(fn(s)).then(v => out = v);
+    t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  });
+}
+const all = store => tx(store, "readonly", s => new Promise(r => { const q = s.getAll(); q.onsuccess = () => r(q.result); }));
+const put = (store, v) => tx(store, "readwrite", s => { s.put(v); });
+const del = (store, id) => tx(store, "readwrite", s => { s.delete(id); });
 
-// Store picker
-const sel = $("store");
+/* ---------- State ---------- */
+let projects = [], photos = [];
+const sel = new Set();
+const urls = new Map();   // photo id -> thumb object URL
+const thumbURL = p => { if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(p.thumb)); return urls.get(p.id); };
+
+const storeSel = $("store");
 for (const [g, names] of Object.entries(STORES)) {
   const og = document.createElement("optgroup"); og.label = g;
   for (const n of names) { const o = document.createElement("option"); o.value = o.textContent = n; og.appendChild(o); }
-  sel.appendChild(og);
+  storeSel.appendChild(og);
 }
-function syncStore() {
-  $("storeName").textContent = sel.value || "점포 선택";
-  $("storePill").classList.toggle("unset", !sel.value);
-}
-sel.value = ls.get("store") || ""; syncStore();
-sel.onchange = () => { ls.set("store", sel.value); syncStore(); };
+function syncStore() { $("storeName").textContent = storeSel.value || "점포 선택"; $("storePill").classList.toggle("unset", !storeSel.value); }
+storeSel.value = ls.get("store") || ""; syncStore();
+storeSel.onchange = () => { ls.set("store", storeSel.value); syncStore(); render(); };
+$("today").textContent = ymd(new Date());
 
-// EXIF DateTimeOriginal (for album photos)
+const defaultName = p => p.store || storeSel.value || "프로젝트";
+const projName = p => p.name || defaultName(p);
+
+async function newProject() {
+  const p = { id: uid(), name: "", day: todayKey(), ts: Date.now(), store: storeSel.value };
+  projects.push(p); await put("projects", p); return p;
+}
+// Camera shoots into the latest project from today, or a new one
+async function currentProject() {
+  const t = todayKey();
+  const today = projects.filter(p => p.day === t).sort((a, b) => b.ts - a.ts)[0];
+  return today || newProject();
+}
+
+/* ---------- Image processing ---------- */
 async function exifDate(file) {
   try {
     const buf = new DataView(await file.slice(0, 131072).arrayBuffer());
@@ -203,115 +367,282 @@ async function exifDate(file) {
   } catch {}
   return null;
 }
-
-function loadImage(file) {
+function loadImage(blob) {
   return new Promise((res, rej) => {
-    const url = URL.createObjectURL(file), img = new Image();
-    img.onload = () => res({ img, url });
+    const url = URL.createObjectURL(blob), img = new Image();
+    img.onload = () => { res(img); URL.revokeObjectURL(url); };
     img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("decode")); };
     img.src = url;
   });
 }
-
 // Halve repeatedly before the final resize: keeps fine detail sharp on iPhone Safari
-function resize(img, w, h) {
-  let src = img, sw = img.naturalWidth, sh = img.naturalHeight;
+function resize(src, sw, sh, w, h) {
+  let cur = src;
   while (sw / 2 >= w) {
     const t = document.createElement("canvas"); t.width = Math.round(sw / 2); t.height = Math.round(sh / 2);
-    const g = t.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(src, 0, 0, t.width, t.height);
-    if (src !== img) { src.width = src.height = 0; }
-    src = t; sw = t.width; sh = t.height;
+    const g = t.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(cur, 0, 0, t.width, t.height);
+    if (cur !== src && cur.width) { cur.width = cur.height = 0; }
+    cur = t; sw = t.width; sh = t.height;
   }
   const c = document.createElement("canvas"); c.width = w; c.height = h;
-  const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(src, 0, 0, w, h);
-  if (src !== img) { src.width = src.height = 0; }
+  const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(cur, 0, 0, w, h);
+  if (cur !== src && cur.width) { cur.width = cur.height = 0; }
   return c;
 }
+const toBlob = (c, q) => new Promise(r => c.toBlob(r, "image/jpeg", q));
 
-async function processPhoto(file, fromCamera) {
-  const taken = (fromCamera ? null : await exifDate(file)) || (fromCamera ? new Date() : new Date(file.lastModified || Date.now()));
-  const { img, url } = await loadImage(file);
-  const w0 = img.naturalWidth, h0 = img.naturalHeight, s = Math.min(1, MAX_EDGE / Math.max(w0, h0));
-  const w = Math.round(w0 * s), h = Math.round(h0 * s);
-  const c = resize(img, w, h);
-  URL.revokeObjectURL(url);
-
+// src: image or canvas; returns stored photo record
+async function makePhoto(src, sw, sh, taken, before, project) {
+  const s = Math.min(1, MAX_EDGE / Math.max(sw, sh));
+  const w = Math.round(sw * s), h = Math.round(sh * s);
+  const c = resize(src, sw, sh, w, h);
   const g = c.getContext("2d"), fs = Math.round(Math.max(w, h) * 0.022), m = Math.round(fs * 0.8);
   g.font = `600 ${fs}px "Helvetica Neue", Arial, sans-serif`;
   g.textAlign = "right"; g.textBaseline = "bottom";
   g.shadowColor = "rgba(0,0,0,.75)"; g.shadowBlur = fs * 0.25; g.shadowOffsetY = fs * 0.05;
-  g.fillStyle = "#ffb43a";
-  g.fillText(ymd(taken), w - m, h - m);
-
-  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", QUALITY));
-  c.width = c.height = 0;
-  const stamp = `${taken.getFullYear()}${pad(taken.getMonth() + 1)}${pad(taken.getDate())}_${pad(taken.getHours())}${pad(taken.getMinutes())}${pad(taken.getSeconds())}`;
-  return { blob, filename: `${sel.value || "매장사진"}_${stamp}.jpg`, before: file.size, w, h };
+  g.fillStyle = "#ffb43a"; g.fillText(ymd(taken), w - m, h - m);
+  const blob = await toBlob(c, QUALITY);
+  const ts = THUMB / Math.min(w, h), tc = resize(c, w, h, Math.round(w * ts), Math.round(h * ts));
+  const thumb = await toBlob(tc, 0.78);
+  c.width = c.height = 0; tc.width = tc.height = 0;
+  const p = { id: uid(), projectId: project.id, blob, thumb, w, h, before: before || 0, taken: taken.getTime(), ts: Date.now(), saved: false, store: storeSel.value };
+  photos.push(p); await put("photos", p);
+  return p;
+}
+async function photoFromFile(file, project, fromCamera) {
+  const taken = (fromCamera ? null : await exifDate(file)) || (fromCamera ? new Date() : new Date(file.lastModified || Date.now()));
+  const img = await loadImage(file);
+  return makePhoto(img, img.naturalWidth, img.naturalHeight, taken, file.size, project);
+}
+function fileName(p) {
+  const pr = projects.find(x => x.id === p.projectId), d = new Date(p.taken);
+  const parts = [p.store || storeSel.value || "매장사진"];
+  if (pr?.name) parts.push(safeName(pr.name));
+  parts.push(`${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`);
+  return parts.join("_") + ".jpg";
 }
 
-// Saving: iOS share sheet ("이미지 저장" → 사진 앱), else plain download
-const shareOK = files => { try { return !!(navigator.canShare && navigator.canShare({ files })); } catch { return false; } };
-async function saveFiles(items) {
-  const files = items.map(r => new File([r.blob], r.filename, { type: "image/jpeg" }));
-  if (shareOK(files)) { await navigator.share({ files }); return; }
-  for (const r of items) {
-    const a = document.createElement("a"); a.href = URL.createObjectURL(r.blob); a.download = r.filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    await new Promise(z => setTimeout(z, 300));
+/* ---------- Main list ---------- */
+function defaultSelect() { sel.clear(); const t = todayKey(); for (const p of photos) if (projects.find(x => x.id === p.projectId)?.day === t) sel.add(p.id); }
+
+function render() {
+  const g = $("groups"); g.textContent = "";
+  const t = todayKey();
+  const list = projects.map(pr => ({ pr, ph: photos.filter(p => p.projectId === pr.id).sort((a, b) => a.ts - b.ts) }))
+    .filter(x => x.ph.length).sort((a, b) => (b.pr.day.localeCompare(a.pr.day)) || (b.pr.ts - a.pr.ts));
+  const has = list.length > 0;
+  $("toolbar").hidden = !has; $("newProj").hidden = !has;
+  const todayN = photos.filter(p => projects.find(x => x.id === p.projectId)?.day === t).length;
+  $("heroTitle").innerHTML = todayN ? `오늘 ${todayN}장<br>찍었어요` : "매장 사진을<br>찍어 주세요";
+  $("heroSub").textContent = has ? "사진을 누르면 선택, 길게 누르면 크게 보여요." : "가운데 버튼을 누르면 카메라가 열리고, 여러 장을 이어서 찍을 수 있어요.";
+
+  if (!has) {
+    g.innerHTML = `<div class="emptylist"><ol>
+      <li><b>오른쪽 위에서 점포 선택</b> — 파일 이름에 들어가요</li>
+      <li><b>가운데 버튼으로 연속 촬영</b> — 다 찍고 완료</li>
+      <li><b>선택 후 저장</b> — 오늘 사진이 기본으로 선택돼요</li></ol></div>`;
   }
+  for (const { pr, ph } of list) {
+    const sec = document.createElement("section"); sec.className = "group";
+    const nSel = ph.filter(p => sel.has(p.id)).length;
+    sec.innerHTML = `<div class="ghead">
+        <button class="gcheck ${nSel === ph.length ? "on" : nSel ? "part" : ""}" type="button" aria-label="프로젝트 전체 선택">${CHECK}</button>
+        <input class="gname" type="text" enterkeyhint="done" autocomplete="off" aria-label="프로젝트 이름">
+        <span class="gdate ${pr.day === t ? "is-today" : ""}">${pr.day === t ? "오늘 · " : ""}${prettyDay(pr.day)}</span>
+        <button class="gadd" type="button" aria-label="이 프로젝트에 이어서 촬영">${CAMPLUS}</button>
+      </div><div class="gmeta">${ph.length}장 · ${fmtSize(ph.reduce((a, p) => a + p.blob.size, 0))}</div><div class="grid"></div>`;
+    const inp = sec.querySelector(".gname");
+    inp.value = pr.name; inp.placeholder = defaultName(pr);
+    inp.onchange = async () => { pr.name = inp.value.trim(); await put("projects", pr); };
+    inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); };
+    sec.querySelector(".gcheck").onclick = () => {
+      const allOn = ph.every(p => sel.has(p.id));
+      ph.forEach(p => allOn ? sel.delete(p.id) : sel.add(p.id)); render();
+    };
+    sec.querySelector(".gadd").onclick = () => openCamera(pr);
+    const grid = sec.querySelector(".grid");
+    for (const p of ph) grid.appendChild(thumbEl(p));
+    g.appendChild(sec);
+  }
+  updateCounts();
 }
-
-const shots = [];
-function updateSaveAll() {
-  const left = shots.filter(s => !s.saved).length;
-  $("saveAll").disabled = left === 0;
-  $("badge").hidden = left === 0; $("badge").textContent = left;
-}
-let toastT;
-function toast(t) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2200); }
-function markSaved(list) { for (const s of list) { s.saved = true; s.btn.classList.add("done"); s.btn.lastChild.textContent = "저장됨"; } updateSaveAll(); }
-
-const ICON_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>';
-
-function addCard(r) {
-  const el = document.createElement("article"); el.className = "shot";
-  const pct = Math.max(0, Math.round((1 - r.blob.size / r.before) * 100));
-  el.innerHTML = `<img alt=""><div class="bar"><div class="info"><span class="fname"></span>
-    <span class="size"><s>${fmtSize(r.before)}</s> → ${fmtSize(r.blob.size)}<em>−${pct}%</em></span></div>
-    <button class="save" type="button">${ICON_DL}<span>저장</span></button></div><p class="msg" hidden></p>`;
-  el.querySelector("img").src = URL.createObjectURL(r.blob);
-  el.querySelector(".fname").textContent = r.filename;
-  const s = { ...r, saved: false, btn: el.querySelector(".save") };
-  s.btn.onclick = async () => {
-    const msg = el.querySelector(".msg"); msg.hidden = true;
-    try { await saveFiles([s]); markSaved([s]); }
-    catch (e) { if (e?.name !== "AbortError") { msg.textContent = "저장하지 못했어요. 사진을 길게 눌러 '사진 앱에 저장'을 고르세요."; msg.hidden = false; } }
-  };
-  shots.push(s); updateSaveAll();
+function thumbEl(p) {
+  const el = document.createElement("div");
+  el.className = "thumb" + (sel.has(p.id) ? " sel" : "");
+  el.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="tick">${CHECK}</span>${p.saved ? '<span class="saved">저장됨</span>' : ""}`;
+  el.querySelector("img").src = thumbURL(p);
+  let timer, long = false;
+  el.onpointerdown = () => { long = false; timer = setTimeout(() => { long = true; openViewer(p); }, 450); };
+  el.onpointerup = el.onpointerleave = el.onpointercancel = () => clearTimeout(timer);
+  el.onclick = () => { if (long) return; sel.has(p.id) ? sel.delete(p.id) : sel.add(p.id); render(); };
+  el.oncontextmenu = e => e.preventDefault();
   return el;
 }
+function updateCounts() {
+  const n = sel.size, size = photos.filter(p => sel.has(p.id)).reduce((a, p) => a + p.blob.size, 0);
+  $("selCount").innerHTML = n ? `${n}장 선택<small>${fmtSize(size)}</small>` : `선택 없음`;
+  $("badge").hidden = !n; $("badge").textContent = n;
+  $("saveBtn").disabled = !n; $("delBtn").disabled = !n;
+  const allOn = photos.length && photos.every(p => sel.has(p.id));
+  $("selAll").textContent = allOn ? "선택 해제" : "전체 선택";
+}
+$("selAll").onclick = () => { const allOn = photos.every(p => sel.has(p.id)); sel.clear(); if (!allOn) photos.forEach(p => sel.add(p.id)); render(); };
+$("selToday").onclick = () => { defaultSelect(); render(); };
+$("newProj").onclick = async () => openCamera(await newProject());
 
-$("saveAll").onclick = async () => {
-  const list = shots.filter(s => !s.saved); if (!list.length) return;
-  try { await saveFiles(list); markSaved(list); toast(`${list.length}장 저장했어요`); }
-  catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 한 장씩 저장해 주세요."); }
+/* ---------- Saving ---------- */
+let toastT;
+function toast(t) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2400); }
+const canShare = files => { try { return !!(navigator.canShare && navigator.canShare({ files })); } catch { return false; } };
+async function saveList(list) {
+  const files = list.map(p => new File([p.blob], fileName(p), { type: "image/jpeg" }));
+  if (canShare(files)) await navigator.share({ files });
+  else for (const p of list) {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(p.blob); a.download = fileName(p);
+    document.body.appendChild(a); a.click(); a.remove(); await new Promise(z => setTimeout(z, 300));
+  }
+  for (const p of list) { p.saved = true; await put("photos", p); }
+}
+$("saveBtn").onclick = async () => {
+  const list = photos.filter(p => sel.has(p.id)).sort((a, b) => a.ts - b.ts);
+  if (!list.length) return;
+  try { await saveList(list); toast(`${list.length}장 저장했어요`); sel.clear(); render(); }
+  catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 사진을 길게 눌러 저장해 주세요."); }
 };
 
-let working = 0;
-async function handle(files, fromCamera) {
-  if (!files.length) return;
-  $("empty")?.remove();
-  for (const file of files) {
-    working++; $("shutter").classList.add("working");
-    const ph = document.createElement("div"); ph.className = "shot busy"; ph.textContent = "사진 정리 중…";
-    $("feed").prepend(ph); ph.scrollIntoView({ behavior: "smooth", block: "start" });
-    try { ph.replaceWith(addCard(await processPhoto(file, fromCamera))); }
-    catch { ph.classList.remove("busy"); ph.style.padding = "20px"; ph.textContent = "이 사진은 처리하지 못했어요. 다시 찍어 주세요."; }
-    if (--working === 0) $("shutter").classList.remove("working");
+/* ---------- Delete ---------- */
+$("delBtn").onclick = () => { $("sheetTitle").textContent = `사진 ${sel.size}장을 삭제할까요?`; $("sheet").hidden = false; };
+$("sheetNo").onclick = () => $("sheet").hidden = true;
+$("sheet").onclick = e => { if (e.target === $("sheet")) $("sheet").hidden = true; };
+$("sheetYes").onclick = async () => {
+  $("sheet").hidden = true;
+  const ids = [...sel];
+  for (const id of ids) { await del("photos", id); if (urls.has(id)) { URL.revokeObjectURL(urls.get(id)); urls.delete(id); } }
+  photos = photos.filter(p => !sel.has(p.id)); sel.clear();
+  for (const pr of [...projects]) if (!photos.some(p => p.projectId === pr.id)) { await del("projects", pr.id); projects = projects.filter(x => x !== pr); }
+  toast(`${ids.length}장 삭제했어요`); render();
+};
+
+/* ---------- Viewer ---------- */
+let viewing = null, viewURL = null;
+function openViewer(p) {
+  viewing = p; viewURL = URL.createObjectURL(p.blob);
+  $("vImg").src = viewURL; $("vName").textContent = fileName(p);
+  $("vInfo").textContent = `${p.w}×${p.h} · ${fmtSize(p.blob.size)}`; $("viewer").hidden = false;
+}
+$("vClose").onclick = () => { $("viewer").hidden = true; URL.revokeObjectURL(viewURL); viewing = null; };
+$("vSave").onclick = async () => {
+  try { await saveList([viewing]); toast("저장했어요"); render(); } catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 사진을 길게 눌러 저장해 주세요."); }
+};
+
+/* ---------- Album import ---------- */
+$("lib").onchange = async e => {
+  const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+  const pr = await currentProject(); toast(`${files.length}장 정리 중…`);
+  for (const f of files) { try { const p = await photoFromFile(f, pr, false); sel.add(p.id); } catch {} render(); }
+  toast(`${files.length}장 추가했어요`);
+};
+
+/* ---------- Camera (stays open for continuous shooting) ---------- */
+let stream = null, camProject = null, sessionCount = 0, queue = Promise.resolve(), pending = 0;
+const video = $("video");
+
+async function startStream() {
+  $("camMsg").hidden = true;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: false,
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 4032 }, height: { ideal: 3024 } } });
+    video.srcObject = stream; await video.play().catch(() => {});
+    setTimeout(() => { $("res").textContent = `${video.videoWidth}×${video.videoHeight}`; }, 600);
+  } catch (err) {
+    stream = null;
+    $("camMsg").innerHTML = `<div>카메라를 열 수 없어요.<br>설정 › Safari › 카메라에서 허용해 주세요.</div><label class="chip" for="nativeCam">기본 카메라로 찍기</label>`;
+    $("camMsg").hidden = false;
   }
 }
-$("cam").onchange = e => { const f = [...e.target.files]; e.target.value = ""; handle(f, true); };
-$("lib").onchange = e => { const f = [...e.target.files]; e.target.value = ""; handle(f, false); };
+function stopStream() { stream?.getTracks().forEach(t => t.stop()); stream = null; video.srcObject = null; }
+
+async function openCamera(pr) {
+  camProject = pr || await currentProject();
+  sessionCount = 0; $("camCount").textContent = "0";
+  $("tray").innerHTML = '<span class="hint">찍은 사진이 여기에 모여요</span>';
+  $("camDate").textContent = prettyDay(camProject.day);
+  $("camProjName").value = camProject.name; $("camProjName").placeholder = defaultName(camProject);
+  $("cam").hidden = false; document.body.style.overflow = "hidden";
+  if (navigator.mediaDevices?.getUserMedia) await startStream();
+  else { $("camMsg").innerHTML = `<div>이 브라우저는 연속 촬영을 지원하지 않아요.</div><label class="chip" for="nativeCam">기본 카메라로 찍기</label>`; $("camMsg").hidden = false; }
+}
+$("openCam").onclick = () => openCamera();
+$("camProjName").onchange = async () => { camProject.name = $("camProjName").value.trim(); await put("projects", camProject); };
+$("camProjName").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
+
+async function closeCamera() {
+  stopStream(); $("cam").hidden = true; document.body.style.overflow = "";
+  if (pending) toast("마지막 사진 정리 중…");
+  await queue;
+  defaultSelect(); render();
+  if (sessionCount) toast(`${sessionCount}장 찍었어요 · 오늘 사진이 선택돼 있어요`);
+}
+$("camDone").onclick = closeCamera;
+$("camClose").onclick = closeCamera;
+
+function addToTray(src) {
+  const tray = $("tray"); tray.querySelector(".hint")?.remove();
+  const im = document.createElement("img"); im.src = src; im.alt = ""; tray.appendChild(im);
+  tray.scrollTo({ left: tray.scrollWidth, behavior: "smooth" });
+  return im;
+}
+function flyToTray(src, fromRect) {
+  const im = addToTray(src); im.style.visibility = "hidden";
+  const to = im.getBoundingClientRect();
+  const f = document.createElement("img"); f.className = "flyer"; f.src = src;
+  Object.assign(f.style, { left: fromRect.left + "px", top: fromRect.top + "px", width: fromRect.width + "px", height: fromRect.height + "px" });
+  document.body.appendChild(f);
+  const dx = to.left - fromRect.left, dy = to.top - fromRect.top, sx = to.width / fromRect.width, sy = to.height / fromRect.height;
+  const a = f.animate([{ transform: "none", borderRadius: "4px" }, { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, borderRadius: "20px" }],
+    { duration: 420, easing: "cubic-bezier(.5,0,.2,1)", fill: "forwards" });
+  a.onfinish = () => { f.remove(); im.style.visibility = ""; };
+}
+
+$("snap").onclick = () => {
+  if (!stream || !video.videoWidth) return;
+  const vw = video.videoWidth, vh = video.videoHeight, taken = new Date();
+  const frame = document.createElement("canvas"); frame.width = vw; frame.height = vh;
+  frame.getContext("2d").drawImage(video, 0, 0, vw, vh);
+  // flash + fly animation from the visible video area
+  $("flash").animate([{ opacity: .85 }, { opacity: 0 }], { duration: 220 });
+  const vr = video.getBoundingClientRect(), scale = Math.min(vr.width / vw, vr.height / vh);
+  const rect = { width: vw * scale, height: vh * scale }; rect.left = vr.left + (vr.width - rect.width) / 2; rect.top = vr.top + (vr.height - rect.height) / 2;
+  const prev = document.createElement("canvas"); const ps = 160 / Math.min(vw, vh); prev.width = Math.round(vw * ps); prev.height = Math.round(vh * ps);
+  prev.getContext("2d").drawImage(frame, 0, 0, prev.width, prev.height);
+  flyToTray(prev.toDataURL("image/jpeg", .7), rect);
+  sessionCount++; $("camCount").textContent = sessionCount;
+  const pr = camProject; pending++;
+  queue = queue.then(() => makePhoto(frame, vw, vh, taken, 0, pr)).catch(() => toast("사진 한 장을 저장하지 못했어요")).finally(() => { frame.width = frame.height = 0; pending--; });
+};
+
+// Fallback / single best-quality shot through the iPhone camera app
+$("nativeCam").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  sessionCount++; $("camCount").textContent = sessionCount;
+  const pr = camProject; pending++;
+  queue = queue.then(async () => { const p = await photoFromFile(f, pr, true); addToTray(thumbURL(p)); }).catch(() => toast("이 사진은 처리하지 못했어요")).finally(() => pending--);
+};
+
+document.addEventListener("visibilitychange", () => {
+  if ($("cam").hidden) return;
+  if (document.hidden) stopStream(); else startStream();
+});
+
+/* ---------- Boot ---------- */
+(async () => {
+  try {
+    db = await openDB();
+    [projects, photos] = await Promise.all([all("projects"), all("photos")]);
+    navigator.storage?.persist?.().catch(() => {});
+  } catch { toast("사진 보관함을 열 수 없어요. 개인정보 보호 모드를 꺼 주세요."); }
+  defaultSelect(); render();
+})();
 </script>
 </body>
 </html>
