@@ -611,7 +611,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.10"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.11"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -693,8 +693,52 @@ function tx(store, mode, fn) {
     throw error;
   }).finally(() => clearTimeout(timer));
 }
-const all = store => tx(store, "readonly", s => new Promise(r => { const q = s.getAll(); q.onsuccess = () => r(q.result); }));
-const put = (store, v) => tx(store, "readwrite", s => { s.put(v); });
+const blobBuffers = new WeakMap(), legacyPhotos = new WeakSet();
+let photoMigration = Promise.resolve();
+async function readPhotoBlob(blob) {
+  if (!(blob instanceof Blob)) throw Error("사진 파일을 못 읽어요");
+  if (blobBuffers.has(blob)) return blobBuffers.get(blob);
+  let timer;
+  try {
+    const buffer = await Promise.race([
+      blob.arrayBuffer(),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(Error("사진 파일을 못 읽어요")), 5000); })
+    ]);
+    blobBuffers.set(blob, buffer);
+    return buffer;
+  } catch { throw Error("사진 파일을 못 읽어요"); }
+  finally { clearTimeout(timer); }
+}
+const all = async store => {
+  const records = await tx(store, "readonly", s => new Promise(r => { const q = s.getAll(); q.onsuccess = () => r(q.result); }));
+  if (store === "photos") for (const p of records) {
+    if (!p.blobData && p.blob instanceof Blob) legacyPhotos.add(p);
+    for (const key of ["blob", "thumb"]) if (p[key + "Data"]) {
+      const buffer = p[key + "Data"];
+      p[key] = new Blob([buffer], { type:p[key + "Type"] || "image/jpeg" });
+      blobBuffers.set(p[key], buffer);
+      delete p[key + "Data"]; delete p[key + "Type"];
+    }
+    if (!(p.blob instanceof Blob)) p.broken = true;
+  }
+  return records;
+};
+const put = async (store, v) => {
+  let record = v;
+  if (store === "photos") {
+    record = { ...v };
+    if (!(v.blob instanceof Blob)) record.broken = true;
+    // Finish Blob reads before opening the IndexedDB transaction.
+    for (const key of ["blob", "thumb"]) {
+      delete record[key]; delete record[key + "Data"]; delete record[key + "Type"];
+      if (v[key] instanceof Blob) {
+        record[key + "Data"] = await readPhotoBlob(v[key]);
+        record[key + "Type"] = v[key].type;
+      }
+    }
+  }
+  return tx(store, "readwrite", s => { s.put(record); });
+};
 const del = (store, id) => tx(store, "readwrite", s => { s.delete(id); });
 
 /* ---------- State ---------- */
@@ -706,7 +750,7 @@ function clearThumb(id) {
   if (urls.has(id)) { URL.revokeObjectURL(urls.get(id)); urls.delete(id); }
 }
 async function repairThumb(p, failedURL) {
-  if (p.broken || thumbRepairs.has(p.id) || urls.get(p.id) !== failedURL) return;
+  if (p.broken || !(p.blob instanceof Blob) || thumbRepairs.has(p.id) || urls.get(p.id) !== failedURL) return;
   // Register before decoding so simultaneous failures share one attempt.
   thumbRepairs.set(p.id, "repairing"); clearThumb(p.id);
   let canvas;
@@ -728,8 +772,8 @@ async function repairThumb(p, failedURL) {
   render();
 }
 function thumbURL(p, image = new Image()) {
-  if (p.broken) return "";
-  if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(p.thumb));
+  if (p.broken || !(p.blob instanceof Blob)) return "";
+  if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(p.thumb instanceof Blob ? p.thumb : new Blob([], { type:"image/jpeg" })));
   const url = urls.get(p.id);
   image.onerror = () => {
     if (thumbRepairs.get(p.id) === "done" && urls.get(p.id) === url) {
@@ -750,6 +794,37 @@ function brokenPhoto(el, p) {
     photos = photos.filter(x => x !== p); render();
   };
   el.append(text, remove);
+}
+
+async function markPhotoUnreadable(p, showToast = false) {
+  const msg = "사진 파일을 못 읽어요 · 다시 찍어 주세요";
+  p.broken = true;
+  if (p.hq && !p.sent) delete p.hq;
+  // Keep the broken entry and its history without persisting an unreadable Blob.
+  p.blob = null; p.thumb = null;
+  delete p.sendError; delete p.retryable;
+  clearThumb(p.id); sel.delete(p.id);
+  uploadProgress(msg, { flow:true });
+  if (showToast) toast(msg);
+  await recordSend(p, "broken", msg, false);
+  render();
+}
+async function migrateLegacyPhotos() {
+  let moved = 0;
+  for (const p of photos.filter(p => legacyPhotos.has(p))) {
+    try { await readPhotoBlob(p.blob); }
+    catch { await markPhotoUnreadable(p); continue; }
+    try { await readPhotoBlob(p.thumb); }
+    catch {
+      // An empty thumbnail triggers the existing repair from the readable original.
+      p.thumb = new Blob([], { type:"image/jpeg" }); clearThumb(p.id);
+    }
+    if (!photos.includes(p)) continue;
+    try { await put("photos", p); moved++; }
+    catch { uploadProgress("옛 사진 저장 실패 · 다음에 다시 옮겨요", { flow:true }); }
+  }
+  if (moved) uploadProgress(`옛 사진 ${moved}장 새 방식으로 옮김`, { flow:true });
+  render();
 }
 
 const storeSel = $("store");
@@ -952,7 +1027,7 @@ function render() {
         <input class="gname" type="text" enterkeyhint="done" autocomplete="off" aria-label="프로젝트 이름">
         <span class="gdate ${pr.day === t ? "is-today" : ""}">${pr.day === t ? "오늘 · " : ""}${prettyDay(pr.day)}</span>
         <button class="gadd" type="button" aria-label="이 프로젝트에 이어서 촬영">${CAMPLUS}</button>
-      </div><div class="gmeta">${ph.length}장 · ${fmtSize(ph.reduce((a, p) => a + p.blob.size, 0))}</div><div class="grid"></div>`;
+      </div><div class="gmeta">${ph.length}장 · ${fmtSize(ph.reduce((a, p) => a + (p.blob?.size || 0), 0))}</div><div class="grid"></div>`;
     const inp = sec.querySelector(".gname");
     inp.readOnly = !!pr.hqProjectId;
     inp.value = pr.name; inp.placeholder = defaultName(pr);
@@ -997,7 +1072,7 @@ function thumbEl(p) {
 function updateCounts() {
   for (const id of sel) if (!photos.some(p => p.id === id && !p.hq)) sel.delete(id);
   const personal = photos.filter(p => !p.hq);
-  const n = sel.size, size = personal.filter(p => sel.has(p.id)).reduce((a, p) => a + p.blob.size, 0);
+  const n = sel.size, size = personal.filter(p => sel.has(p.id)).reduce((a, p) => a + (p.blob?.size || 0), 0);
   $("selCount").innerHTML = n ? `${n}장 선택<small>${fmtSize(size)}</small>` : `선택 없음`;
   $("badge").hidden = !n; $("badge").textContent = n;
   $("saveBtn").disabled = !n; $("delBtn").disabled = !n;
@@ -1018,7 +1093,7 @@ let toastT;
 function toast(t) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2400); }
 const canShare = files => { try { return !!(navigator.canShare && navigator.canShare({ files })); } catch { return false; } };
 async function saveList(list) {
-  list = list.filter(p => !p.broken);
+  list = list.filter(p => !p.broken && p.blob instanceof Blob);
   if (!list.length) return;
   const files = list.map(p => new File([p.blob], fileName(p), { type: "image/jpeg" }));
   if (canShare(files)) await navigator.share({ files });
@@ -1029,7 +1104,7 @@ async function saveList(list) {
   for (const p of list) { p.saved = true; await put("photos", p); }
 }
 $("saveBtn").onclick = async () => {
-  const list = photos.filter(p => sel.has(p.id) && !p.broken).sort((a, b) => a.ts - b.ts);
+  const list = photos.filter(p => sel.has(p.id) && !p.broken && p.blob instanceof Blob).sort((a, b) => a.ts - b.ts);
   if (!list.length) return toast("저장할 수 있는 사진이 없어요");
   try { await saveList(list); toast(`${list.length}장 저장했어요`); sel.clear(); render(); }
   catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 다시 시도해 주세요."); }
@@ -1055,7 +1130,7 @@ $("sheetYes").onclick = async () => {
 /* ---------- Viewer ---------- */
 const remoteSelection = new Set();
 const MAGNIFY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg>';
-function localOriginal(item) { return item.blob ? item : photos.find(p => p.id === item.uid); }
+function localOriginal(item) { return photos.includes(item) || item.blob instanceof Blob ? item : photos.find(p => p.id === item.uid); }
 function photoControls(el, item, group) {
   const local = localOriginal(item), selection = local ? sel : remoteSelection;
   const key = local ? local.id : `remote:${item.id ?? item.uid ?? item.thumb_url}`;
@@ -1075,19 +1150,21 @@ const viewArea = $("vImg").parentElement, viewPointers = new Map();
 function viewTransform() { $("vImg").style.transform = `translate(${viewX}px,${viewY}px) scale(${viewScale})`; }
 function resetView() { viewScale = 1; viewX = viewY = 0; viewTransform(); }
 function openViewer(p, list = [p]) {
+  const local = localOriginal(p);
+  if (p.broken || local && (local.broken || !(local.blob instanceof Blob))) return toast("사진 파일을 못 읽어요 · 다시 찍어 주세요");
   viewHQ = null; $("vHQActions").hidden = true;
   if (viewURL) URL.revokeObjectURL(viewURL);
   viewItems = list; viewIndex = Math.max(0, list.indexOf(p)); viewing = localOriginal(p) || null;
   viewURL = viewing ? URL.createObjectURL(viewing.blob) : null;
   $("vImg").src = viewURL || new URL(p.thumb_url, SERVER).href;
   $("vName").textContent = viewing ? fileName(viewing) : "본사 취합 · 썸네일";
-  $("vInfo").textContent = `${viewIndex + 1}/${list.length} · ` + (viewing ? `${viewing.w}×${viewing.h} · ${fmtSize(viewing.blob.size)}` : "썸네일 미리보기");
+  $("vInfo").textContent = `${viewIndex + 1}/${list.length} · ` + (viewing ? `${viewing.w}×${viewing.h} · ${fmtSize(viewing.blob?.size || 0)}` : "썸네일 미리보기");
   $("vSave").hidden = !viewing; $("vPrev").disabled = viewIndex === 0; $("vNext").disabled = viewIndex === list.length - 1;
   resetView(); $("viewer").hidden = false;
 }
 function openHQViewer(project, item, slot) {
   openViewer(item);
-  if (item.hq && !item.sent && activeUpload !== item.id) {
+  if (!item.broken && item.blob instanceof Blob && item.hq && !item.sent && activeUpload !== item.id) {
     viewHQ = { project, item, slot };
     $("vHQActions").hidden = false;
   }
@@ -1632,7 +1709,7 @@ function updateDragPosition(drag) {
   markDrop(tile?.closest(".hq-cell") || null);
 }
 async function movePhotoToSlot(photo, cell) {
-  if (dropState(cell) === "invalid") return;
+  if (photo.broken || !(photo.blob instanceof Blob) || dropState(cell) === "invalid") return;
   const project = cell._hqProject, slot = cell._hqSlot, old = cell._hqItem;
   const previous = { hq:photo.hq, sent:photo.sent, store:photo.store, log:photo.log };
   const oldHQ = old?.hq ? { hq:old.hq, sent:old.sent, store:old.store, log:old.log } : null;
@@ -1653,7 +1730,7 @@ async function movePhotoToSlot(photo, cell) {
 function installVaultDrag(el, photo) {
   el.onpointerdown = e => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (vaultDrag || photo.broken || e.target.closest("button")) return;
+    if (vaultDrag || photo.broken || !(photo.blob instanceof Blob) || e.target.closest("button")) return;
     const drag = { id:e.pointerId, source:el, photo, startX:e.clientX, startY:e.clientY, x:e.clientX, y:e.clientY, rect:el.getBoundingClientRect(), active:false, hover:null };
     vaultDrag = drag;
     const clean = () => {
@@ -1841,6 +1918,7 @@ function uploadProgress(msg, { flow = false, finished = false } = {}) {
   stripTimer = setTimeout(() => { $("uploadStrip").hidden = true; }, 4000);
 }
 async function resumeUploads() {
+  await photoMigration;
   if (!standalone) return uploadProgress("전송 재개 대기 · 홈 화면 앱이 아니에요", { flow:true });
   if (statusStore === null || !same(statusStore, storeId())) return uploadProgress("전송 재개 대기 · 가게 상태를 아직 받지 못했어요", { flow:true });
   notifyMissingHQ();
@@ -1963,6 +2041,7 @@ function showSendProgress(projectId) {
 }
 let uploadRun = 0, uploadRound = 0;
 async function sendHQ(projectId, reason) {
+  await photoMigration;
   if (!standalone) return sendNotice("홈 화면 앱에서만 보낼 수 있어요");
   if (sending) return sendNotice(sendingNotice());
   clearTimeout(retryTimer);
@@ -1986,6 +2065,15 @@ async function sendHQ(projectId, reason) {
         activeUpload = p.id; p.tries = (p.tries || 0) + 1; delete p.sendError; delete p.retryable;
         batchTotal = Math.max(batchTotal, batchDone + unsentHQ(projectId).length);
         try {
+          let buffer;
+          try { buffer = await readPhotoBlob(p.blob); }
+          catch {
+            if (!current()) return;
+            activeUpload = null;
+            await markPhotoUnreadable(p, true);
+            return;
+          }
+          if (!current()) return;
           await recordSend(p, "sending", `${p.hq.storeName || p.store} · ${p.hq.slotName || p.hq.slot || "자유 촬영"} 보내는 중 (${batchDone + 1}/${batchTotal})`);
           if (!current()) return;
           renderHQ(); showSendProgress(projectId);
@@ -1994,7 +2082,8 @@ async function sendHQ(projectId, reason) {
           if (p.hq.replaceItemId != null) fields.item_id = p.hq.replaceItemId;
           else { fields.project_id = p.hq.projectId; if (p.hq.slot != null) fields.slot = p.hq.slot; }
           for (const [key,value] of Object.entries(fields)) data.append(key, value);
-          data.append("photo", p.blob, fileName(p)); data.append("thumb", p.thumb, "thumb.jpg");
+          data.append("photo", new Blob([buffer], { type:p.blob?.type || "image/jpeg" }), fileName(p));
+          if (p.thumb instanceof Blob) data.append("thumb", p.thumb, "thumb.jpg");
           let r;
           try { r = await hubFetch(`/api/store-photo/${p.hq.replaceItemId != null ? "replace" : "upload"}`, { method:"POST", body:data }); }
           catch (error) {
@@ -2108,6 +2197,8 @@ setInterval(() => { refreshHQ(); checkAppVersion(); }, 60000);
   try {
     db = await openDB();
     [projects, photos] = await Promise.all([all("projects"), all("photos")]);
+    photoMigration = migrateLegacyPhotos();
+    await photoMigration;
     for (const p of photos.filter(p => p.hq)) {
       p.tries ||= 0;
       if (!p.log?.length || p.log.at(-1).state === "sending") {
