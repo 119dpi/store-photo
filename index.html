@@ -346,10 +346,13 @@ body.hq-expanded .hq-summary .hq-send { height:40px; margin-top:8px; }
 body.hq-expanded .hq-summary.open-glow::after { border-radius:18px; background:#1b1712; }
 .hq-summary > :not(.hq-sparks) { position:relative; z-index:2; }
 .hq-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-.hq-card-title { min-width:0; display:grid; gap:4px; }
+.hq-card-title { flex:1; min-width:0; display:grid; gap:4px; }
 .hq-card-title strong { font-size:17px; line-height:1.25; font-weight:800; }
 .hq-card-title .hq-meta { font-size:12px; font-weight:400; }
 .hq-deadline { font-weight:700; }
+.hq-card-title .hq-meta { display:flex !important; align-items:center; flex-wrap:wrap; gap:0; }
+.hq-reset { margin-left:auto; padding-left:8px; color:var(--muted); font-size:12px; }
+.hq-reset:disabled { opacity:.4; cursor:default; }
 .hq-log-link { color:var(--muted); font-size:12px; text-align:left; }
 .hq-state { flex:none; display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:999px; background:#34c75922; color:var(--ok); font-size:12px; font-weight:700; }
 .hq-state::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
@@ -565,7 +568,8 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
     <button class="cam-x" id="vClose" type="button" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
   <div class="vimg"><img id="vImg" alt="" draggable="false"></div>
   <div class="vbot"><button class="chip" id="vPrev" type="button" aria-label="이전 사진">‹</button><span id="vInfo"></span><button class="chip" id="vNext" type="button" aria-label="다음 사진">›</button><button class="chip" id="vSave" type="button">사진첩에 저장</button></div>
-  <div class="hq-view-actions" id="vHQActions" hidden><button id="vRetake" type="button">다시 찍기</button><button id="vReplaceAlbum" type="button">앨범에서 바꾸기</button><button id="vChoosePhoto" type="button">사진 바꾸기</button><button id="vClear" type="button">칸 비우기</button></div>
+  <p class="hq-hint hq-view-actions" id="vHQSent" hidden>보낸 사진은 본사에서만 지울 수 있어요</p>
+  <div class="hq-view-actions" id="vHQActions" hidden><button id="vRetake" type="button">다시 찍기</button><button id="vReplaceAlbum" type="button" hidden>앨범에서 바꾸기</button><button id="vChoosePhoto" type="button" hidden>사진 바꾸기</button><button id="vClear" type="button">지우기</button></div>
 </div>
 
 <div class="scrim" id="sheet" hidden>
@@ -649,7 +653,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.13"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.14"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -1258,7 +1262,7 @@ function resetView() { viewScale = 1; viewX = viewY = 0; viewTransform(); }
 function openViewer(p, list = [p]) {
   const local = localOriginal(p);
   if (p.broken || local && (local.broken || !(local.blob instanceof Blob))) return toast("사진 파일을 못 읽어요 · 다시 찍어 주세요");
-  viewHQ = null; $("vHQActions").hidden = true;
+  viewHQ = null; $("vHQActions").hidden = true; $("vHQSent").hidden = true;
   if (viewURL) URL.revokeObjectURL(viewURL);
   viewItems = list; viewIndex = Math.max(0, list.indexOf(p)); viewing = localOriginal(p) || null;
   viewURL = viewing ? URL.createObjectURL(viewing.blob) : null;
@@ -1270,6 +1274,7 @@ function openViewer(p, list = [p]) {
 }
 function openHQViewer(project, item, slot) {
   openViewer(item);
+  $("vHQSent").hidden = !!item.hq && !item.sent;
   if (!item.broken && item.blob instanceof Blob && item.hq && !item.sent && activeUpload !== item.id) {
     viewHQ = { project, item, slot };
     $("vHQActions").hidden = false;
@@ -1283,7 +1288,18 @@ $("vChoosePhoto").onclick = () => { const choice = viewHQ; $("vClose").click(); 
 $("vReplaceAlbum").onclick = () => { const choice = viewHQ; $("vClose").click(); if (choice) chooseHQSlot(choice.project, choice.slot, null, choice.item, "album"); };
 $("vClear").onclick = async () => {
   const choice = viewHQ; if (!choice || choice.item.sent || activeUpload === choice.item.id) return;
-  $("vClose").click(); await removeHQPhoto(choice.item); render();
+  if (sending || deletingHQ) return toast("보내는 중엔 지울 수 없어요");
+  if (!confirm("이 사진을 지울까요? 폰에서 지워지고 되돌릴 수 없어요.")) return;
+  deletingHQ = true;
+  try {
+    const p = choice.item, hq = p.hq;
+    await deletePendingHQPhoto(p);
+    if (hq.slot === "extra" && hq.extraKey) {
+      saveExtraKeys(choice.project, [...new Set([...emptyExtraKeys(choice.project, hq.storeId), hq.extraKey])], hq.storeId);
+    }
+    $("vClose").click();
+  } catch { toast("사진을 지우지 못했어요. 다시 시도해 주세요."); }
+  finally { deletingHQ = false; render(); }
 };
 let viewGesture = null, lastTap = null;
 viewArea.oncontextmenu = e => e.preventDefault();
@@ -1478,6 +1494,7 @@ function notifyMissingHQ() {
   missingNoticeShown = true;
   uploadProgress(`보낼 곳이 없는 사진 ${count}장 — 진행 기록에서 확인해 주세요`);
 }
+let deletingHQ = false;
 let sending = false, retryTimer, retryDelay = 2000, batchDone = 0, batchTotal = 0;
 const storeId = () => storeSel.value === "테스트점" ? testStore?.store_id : hubStores.find(x => x.name === storeSel.value)?.store_id;
 const same = (a, b) => String(a) === String(b);
@@ -1706,7 +1723,14 @@ function renderHQ() {
     }
     const log = document.createElement("button"); log.type = "button"; log.className = "hq-log-link";
     log.textContent = " · 진행 기록 ›"; log.onclick = () => openLog(project.id);
-    dates.appendChild(log); cardTitle.appendChild(dates); head.appendChild(cardTitle);
+    dates.appendChild(log);
+    if (pendingProjectHQ(project).length) {
+      const reset = document.createElement("button"); reset.type = "button"; reset.className = "hq-reset";
+      reset.textContent = "초기화"; reset.disabled = sending || deletingHQ;
+      if (sending) reset.title = "보내는 중엔 초기화할 수 없어요";
+      reset.onclick = () => resetProjectHQ(project); dates.appendChild(reset);
+    }
+    cardTitle.appendChild(dates); head.appendChild(cardTitle);
     const state = document.createElement("span"); state.className = "hq-state" + (paused ? " paused" : "");
     state.textContent = paused ? "잠시 멈춤" : "열림"; head.appendChild(state); box.appendChild(head);
     if (expanded) {
@@ -1961,6 +1985,27 @@ $("hqPickVault").onclick = () => {
 };
 $("hqPickCancel").onclick = () => { $("hqPick").hidden = true; hqSlotChoice = null; };
 $("hqPick").onclick = e => { if (e.target === $("hqPick")) $("hqPickCancel").click(); };
+const pendingProjectHQ = project => photos.filter(p => p.hq && !p.sent && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()));
+async function deletePendingHQPhoto(p) {
+  if (!p.hq || p.sent || activeUpload === p.id) return;
+  await del("photos", p.id);
+  photos = photos.filter(x => x !== p); sel.delete(p.id);
+  clearThumb(p.id); thumbRepairs.delete(p.id);
+  sessionPhotos = sessionPhotos.filter(x => x !== p);
+}
+async function resetProjectHQ(project) {
+  if (sending) return toast("보내는 중엔 초기화할 수 없어요");
+  if (deletingHQ) return;
+  const list = pendingProjectHQ(project), id = storeId();
+  if (!list.length || !confirm(`보내기 전 사진 ${list.length}장을 모두 지울까요? 보낸 사진은 그대로예요(본사에서만 지울 수 있어요).`)) return;
+  deletingHQ = true;
+  try {
+    for (const p of list) await deletePendingHQPhoto(p);
+    saveExtraKeys(project, [], id);
+    if (list.includes(viewing)) $("vClose").click();
+  } catch { toast("사진을 모두 지우지 못했어요. 다시 시도해 주세요."); }
+  finally { deletingHQ = false; render(); }
+}
 async function removeHQPhoto(p) {
   if (!p?.hq || p.sent || activeUpload === p.id) return;
   if (p.hq.slot === "extra" && p.hq.extraKey) {
@@ -1998,6 +2043,7 @@ const sendableHQ = projectId => photos.filter(p => p.hq && same(p.hq.projectId, 
 function sendNotice(msg) { uploadProgress(msg, { flow:true }); toast(msg); }
 const sendingNotice = () => `보내는 중이에요 (${batchDone}/${batchTotal}장)`;
 async function sendProjectHQ(project, reason = "버튼") {
+  if (deletingHQ) return;
   const list = sendableHQ(project.id);
   uploadProgress(`전송 버튼 누름 · 대기 ${list.length}장 · sending=${sending ? "예" : "아니오"}`, { flow:true, quiet:true });
   if (sending) return sendNotice(sendingNotice());
@@ -2207,6 +2253,7 @@ function showSendProgress(projectId) {
 let uploadRun = 0, uploadRound = 0;
 async function sendHQ(projectId, reason) {
   await photoMigration;
+  if (deletingHQ) return;
   if (!standalone) return sendNotice("홈 화면 앱에서만 보낼 수 있어요");
   if (sending) return sendNotice(sendingNotice());
   clearTimeout(retryTimer);
