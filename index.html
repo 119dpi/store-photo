@@ -442,6 +442,25 @@ body.hq-expanded .hq-slot-page .hq-note { position:absolute; bottom:18px; left:4
 .my-photos-grid .thumb { border-radius:10px; }
 .my-photos-hint { margin:0; color:var(--muted); font-size:10px; text-align:center; white-space:nowrap; }
 @media (prefers-reduced-motion:reduce) { .my-photos-sheet { animation:none; } }
+/* .15: measured safe-area header, project navigation, and sent-photo strip. */
+body.hq-expanded .main { height:calc(100dvh - var(--hq-head-h, calc(var(--st) + 54px))); padding-top:12px; padding-bottom:calc(var(--dock-h) + 4px); }
+body.hq-expanded #hqCards:has(.hq-project-chips) { grid-template-rows:36px minmax(0,1fr); gap:8px; }
+.hq-project-chips { display:flex; gap:6px; overflow-x:auto; min-width:0; scrollbar-width:none; }
+.hq-project-chips::-webkit-scrollbar, .hq-sent-rail::-webkit-scrollbar { display:none; }
+.hq-project-chip { flex:none; display:flex; align-items:center; gap:6px; max-width:75%; padding:6px 11px; border-radius:999px; background:var(--panel-2); font-size:12px; }
+.hq-project-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hq-project-chip small { flex:none; font-size:10px; }
+.hq-project-chip[aria-current="true"] { background:var(--stamp); color:#000; font-weight:700; }
+.hq-sent { flex:none; min-width:0; margin-top:4px; }
+.hq-sent-title { margin:0 0 3px; color:var(--muted); font-size:10px; }
+.hq-sent-rail { display:flex; gap:6px; overflow-x:auto; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:none; }
+.hq-sent-rail .hq-cell { flex:0 0 var(--hq-sent-tile, 64px); width:var(--hq-sent-tile, 64px); gap:2px; scroll-snap-align:start; }
+.hq-sent-rail .hq-tile { width:100%; height:auto; aspect-ratio:1; border-radius:7px; }
+.hq-sent-rail .hq-caption { font-size:9px; line-height:12px; max-height:12px; -webkit-line-clamp:1; }
+.hq-sent-rail .hq-mag, .hq-sent-rail .hq-tile-status { display:none; }
+.hq-sent-rail .hq-tile.requested { box-shadow:inset 0 0 0 2px var(--stamp); }
+.hq-sent-rail .hq-note { position:absolute; bottom:14px; left:2px; right:2px; background:#000b; color:var(--stamp); font-size:8px; line-height:12px; text-align:center; }
+.hq-all-sent { margin:2px 0; text-align:center; color:var(--muted); font-size:12px; flex:none; }
 /* Browser-only home screen installation gate */
 body.install-required { overflow:hidden; }
 body.install-required #appSurface { pointer-events:none; user-select:none; filter:blur(5px) brightness(.35); }
@@ -653,7 +672,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.14"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.15"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -1274,6 +1293,7 @@ function openViewer(p, list = [p]) {
 }
 function openHQViewer(project, item, slot) {
   openViewer(item);
+  $("vRetake").hidden = false; $("vClear").hidden = false; $("vChoosePhoto").hidden = true;
   $("vHQSent").hidden = !!item.hq && !item.sent;
   if (!item.broken && item.blob instanceof Blob && item.hq && !item.sent && activeUpload !== item.id) {
     viewHQ = { project, item, slot };
@@ -1639,11 +1659,16 @@ const cardVisibility = typeof IntersectionObserver === "function" ? new Intersec
 }) : null;
 function fitHQRail() {
   if (!document.body.classList.contains("hq-expanded")) return;
+  document.body.style.setProperty("--hq-head-h", `${document.querySelector(".top").getBoundingClientRect().height}px`);
   const rail = $("hqCards").querySelector(".hq-rail");
   const active = rail?.querySelector(".hq-summary.active");
   if (!active) return;
   rail.style.height = "100%";
-  for (const slotRail of rail.querySelectorAll(".hq-slot-rail")) layoutHQSlotPages(slotRail);
+  for (const slotRail of rail.querySelectorAll(".hq-slot-rail")) {
+    // Reserve half a two-column tile before measuring the remaining grid height.
+    slotRail.closest(".hq-summary").style.setProperty("--hq-sent-tile", `${Math.max(1, (slotRail.clientWidth - 10) / 4)}px`);
+    layoutHQSlotPages(slotRail);
+  }
 }
 function layoutHQSlotPages(rail) {
   const cells = rail._cells;
@@ -1695,6 +1720,19 @@ function renderHQ() {
   $("dock").hidden = false; $("groups").hidden = expanded; $("newProj").hidden = expanded;
   $("toolbar").hidden = expanded || !photos.some(p => !p.hq);
   const rail = document.createElement("div"); rail.className = "hq-rail";
+  if (expanded && visible.length > 1) {
+    const chips = document.createElement("nav"); chips.className = "hq-project-chips"; chips.setAttribute("aria-label", "프로젝트 선택");
+    for (const project of visible) {
+      const chip = document.createElement("button"); chip.type = "button"; chip.className = "hq-project-chip";
+      chip.setAttribute("aria-current", String(same(selectedHQ, project.id)));
+      const name = document.createElement("span"); name.textContent = project.name;
+      const progress = document.createElement("small"), slots = activeHQSlots(project);
+      progress.textContent = slots.length ? `${slots.filter(slot => !!slotPhoto(project, slot.key)).length}/${slots.length}` : `${Number(project.total || 0) + localHQ(project).length}장`;
+      chip.append(name, progress); chip.onclick = () => { selectedHQ = project.id; renderHQ(); };
+      chips.appendChild(chip);
+    }
+    root.appendChild(chips);
+  }
   for (const project of visible) {
     const paused = projectPaused(project.id), active = same(selectedHQ, project.id);
     const slots = activeHQSlots(project);
@@ -1743,15 +1781,28 @@ function renderHQ() {
       } else count.textContent = (Number(project.total || 0) + localHQ(project).length) + "장";
       sectionHead.append(sectionTitle, count); box.appendChild(sectionHead);
       const slotRail = document.createElement("div"); slotRail.className = "hq-slot-rail";
+      const isSent = item => !!item && (!item.hq || item.sent);
+      const sentRows = [...(project.items || []), ...localHQ(project).filter(p => p.sent)].map(item => ({
+        item,
+        slot: item.slot === "extra" || item.hq?.slot === "extra"
+          ? extras.find(slot => slot.item === item || same(slot.item?.hq?.replaceItemId, item.id))
+          : slots.find(slot => same(slot.key, item.hq?.slot ?? item.slot))
+      }));
+      const addPhoto = (item, slot) => {
+        if (!isSent(item)) slotRail.appendChild(hqTile(project, item, slot));
+      };
       if (slots.length) {
-        for (const slot of slots) slotRail.appendChild(hqTile(project, slotPhoto(project, slot.key), slot));
-        for (const slot of extras) slotRail.appendChild(hqTile(project, slot.item, slot));
+        for (const slot of slots) addPhoto(slotPhoto(project, slot.key), slot);
+        for (const slot of extras) addPhoto(slot.item, slot);
+        if (!slotRail.children.length) {
+          const done = document.createElement("p"); done.className = "hq-all-sent"; done.textContent = "모두 보냈어요 ✓"; box.appendChild(done);
+        }
         slotRail.appendChild(extraAddTile(project));
       }
       else {
         const locals = localHQ(project);
-        for (const item of project.items || []) if (!locals.some(p => same(p.hq.replaceItemId, item.id))) slotRail.appendChild(hqTile(project, item));
-        for (const p of locals) slotRail.appendChild(hqTile(project, p));
+        for (const item of project.items || []) if (!locals.some(p => same(p.hq.replaceItemId, item.id))) addPhoto(item);
+        for (const p of locals) addPhoto(p);
         const cell = document.createElement("div"); cell.className = "hq-cell";
         const add = document.createElement("button"); add.type = "button"; add.className = "hq-tile empty"; add.textContent = "+";
         const caption = document.createElement("span"); caption.className = "hq-caption"; caption.textContent = "사진 추가";
@@ -1766,6 +1817,26 @@ function renderHQ() {
         dots.querySelectorAll("i").forEach((dot, i) => dot.classList.toggle("active", i === page));
       };
       box.appendChild(dots);
+      if (sentRows.length) {
+        const sent = document.createElement("div"); sent.className = "hq-sent";
+        const title = document.createElement("p"); title.className = "hq-sent-title"; title.textContent = `보낸 사진 ${sentRows.length}장`;
+        const sentRail = document.createElement("div"); sentRail.className = "hq-sent-rail";
+        for (const { item, slot } of sentRows) {
+          const cell = hqTile(project, item, slot);
+          const note = cell.querySelector(".hq-note");
+          if (note) { note.title = note.textContent; note.textContent = "수정요청"; }
+          cell.querySelector(".hq-tile").onclick = () => {
+            openHQViewer(project, item, slot);
+            if (item.status === "requested") {
+              viewHQ = { project, item, slot };
+              $("vHQActions").hidden = false; $("vChoosePhoto").hidden = false;
+              $("vRetake").hidden = true; $("vClear").hidden = true;
+            }
+          };
+          sentRail.appendChild(cell);
+        }
+        sent.append(title, sentRail); box.appendChild(sent);
+      }
       const failed = waiting.some(p => p.sendError);
       const send = document.createElement("button"); send.type = "button"; send.className = "hq-send" + (failed ? " retry" : "");
       send.disabled = !waiting.length || paused;
@@ -1788,7 +1859,10 @@ function renderHQ() {
     if (activeCard) hqCardSize?.observe(activeCard);
     for (const slotRail of rail.querySelectorAll(".hq-slot-rail")) hqCardSize?.observe(slotRail);
   }
-  rail.scrollLeft = scroll;
+  const selectedIndex = visible.findIndex(project => same(project.id, selectedHQ));
+  rail.scrollLeft = expanded && selectedIndex >= 0 ? selectedIndex * (rail.clientWidth + 12) : scroll;
+  const activeChip = root.querySelector('.hq-project-chip[aria-current="true"]');
+  if (activeChip) activeChip.parentElement.scrollLeft = Math.max(0, activeChip.offsetLeft - activeChip.parentElement.offsetLeft - 8);
   const activeSlotRail = rail.querySelector(".hq-summary.active .hq-slot-rail");
   if (activeSlotRail) { activeSlotRail.scrollLeft = slotScroll; activeSlotRail.onscroll(); }
   for (const box of rail.querySelectorAll(".open-glow")) cardVisibility?.observe(box);
@@ -1796,7 +1870,7 @@ function renderHQ() {
     rail.onscroll = () => {
       clearTimeout(rail._pageTimer);
       rail._pageTimer = setTimeout(() => {
-        const page = Math.min(visible.length - 1, Math.round(rail.scrollLeft / Math.max(1, rail.clientWidth)));
+        const page = Math.min(visible.length - 1, Math.round(rail.scrollLeft / Math.max(1, rail.clientWidth + 12)));
         if (!same(selectedHQ, visible[page].id)) { selectedHQ = visible[page].id; renderHQ(); }
       }, 160);
     };
