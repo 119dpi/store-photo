@@ -271,9 +271,37 @@ body:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) 
 @keyframes hq-orbit { to { transform:rotate(360deg); } }
 @keyframes hq-twinkle { 0%,100% { opacity:.15; } 50% { opacity:.85; } }
 @media (prefers-reduced-motion:reduce) { .hq-summary.open-glow::before, .hq-summary .hq-sparks::after { animation:none; will-change:auto; } .hq-summary.open-glow { border-color:var(--stamp); } }
+/* Browser-only home screen installation gate */
+body.install-required { overflow:hidden; }
+body.install-required #appSurface { pointer-events:none; user-select:none; filter:blur(5px) brightness(.35); }
+.install-gate { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; overflow:hidden;
+  padding:calc(var(--st) + 18px) max(16px, env(safe-area-inset-right, 0px)) calc(var(--sb) + 18px) max(16px, env(safe-area-inset-left, 0px)); background:#0005; }
+.install-stamp { position:absolute; inset:-50%; display:grid; place-items:center; transform:rotate(-28deg); pointer-events:none; overflow:hidden; }
+.install-stamp span { position:absolute; left:-20%; width:140%; color:#ffb43a59; border-block:3px solid currentColor; padding:7px 0; text-align:center; white-space:nowrap; font-size:clamp(22px, 6vw, 26px); font-weight:900; letter-spacing:.02em; }
+.install-stamp span:nth-child(1) { top:8%; } .install-stamp span:nth-child(2) { top:20%; } .install-stamp span:nth-child(3) { top:32%; }
+.install-stamp span:nth-child(4) { top:44%; } .install-stamp span:nth-child(5) { top:56%; } .install-stamp span:nth-child(6) { top:68%; }
+.install-stamp span:nth-child(7) { top:80%; } .install-stamp span:nth-child(8) { top:92%; }
+.install-gate { align-items:center; }
+.install-card { transform:translateY(4vh); }
+.install-seal { position:absolute; top:10px; right:12px; padding:5px 9px; border:2px solid var(--stamp); border-radius:6px; color:#a85f00; font-size:11px; line-height:1; font-weight:850; letter-spacing:.03em; transform:rotate(5deg); background:#fffaf2; }
+.install-card { position:relative; width:100%; max-width:480px; min-height:0; max-height:100%; overflow-y:auto; overscroll-behavior:contain;
+  background:#fffaf2; color:#24211d; color-scheme:light; border:2px solid var(--stamp); border-radius:24px; padding:42px 20px 24px; box-shadow:0 18px 70px #0008; }
+.install-card h2 { margin:0 0 12px; font-size:clamp(20px, 5.5vw, 26px); line-height:1.3; letter-spacing:-.03em; }
+.install-card p { margin:12px 0; overflow-wrap:anywhere; }
+.install-steps { list-style:none; counter-reset:install-step; display:grid; gap:16px; padding:0; margin:22px 0; }
+.install-steps li { counter-increment:install-step; display:flex; gap:12px; align-items:center; font-weight:650; }
+.install-steps li::before { content:counter(install-step); flex:none; width:36px; height:36px; display:grid; place-items:center; border-radius:12px; background:var(--stamp); color:#241700; font-size:24px; font-weight:850; }
+.install-share { display:inline-block; width:20px; height:23px; vertical-align:middle; color:#ae6400; }
+.install-card .install-note { font-size:12px; color:#685b49; }
+.install-card .install-open { padding:12px; border-radius:12px; background:#ffb43a33; font-size:13px; font-weight:700; }
+.install-address { display:block; width:100%; padding:12px; border:1px solid #ddcfba; border-radius:12px; background:#fff; color:#403626; overflow-wrap:anywhere; font-size:13px; user-select:all; }
+.install-copy { display:block; width:100%; margin-top:12px; padding:13px; border-radius:12px; background:var(--stamp); color:#241700; font-weight:800; }
+.install-copy-status { min-height:1.5em; font-size:12px; color:#685b49; }
+@media (max-height:450px) { .install-card { padding:18px; border-radius:18px; } .install-steps { gap:10px; margin:16px 0; } }
 </style>
 </head>
 <body>
+<div id="appSurface">
 
 <header class="top">
   <img class="logo" src="logo.png" alt="A STORE">
@@ -297,7 +325,6 @@ body:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) 
   </section>
 
   <div id="hqProgress" class="hq-progress" role="status" hidden></div>
-  <p id="hqHint" class="hq-hint" hidden>홈 화면에 추가하면 본사 취합을 쓸 수 있어요</p>
   <div id="hqCards" class="hq-list" hidden></div>
 
   <div class="toolbar" id="toolbar" hidden>
@@ -407,9 +434,35 @@ body:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) 
 <div class="upload-success" id="uploadSuccess" role="status" hidden></div>
 <button class="upload-strip" id="uploadStrip" type="button" aria-label="업로드 진행 기록 열기" hidden><span id="uploadStripText" role="status" aria-live="polite"></span></button>
 <div class="toast" id="toast" hidden></div>
+</div>
+
+<section class="install-gate" id="installGate" hidden aria-label="홈 화면 앱 안내">
+  <div class="install-stamp" aria-hidden="true"><span>홈 화면 앱으로 열어 주세요</span><span>홈 화면 앱으로 열어 주세요</span><span>홈 화면 앱으로 열어 주세요</span><span>홈 화면 앱으로 열어 주세요</span><span>홈 화면 앱으로 열어 주세요</span><span>홈 화면 앱으로 열어 주세요</span><span>홈 화면 앱으로 열어 주세요</span><span>홈 화면 앱으로 열어 주세요</span></div>
+  <div class="install-card" role="dialog" aria-modal="true" aria-labelledby="installTitle" aria-describedby="installDescription" tabindex="-1">
+    <span class="install-seal" aria-hidden="true">견본 · 웹 보기</span>
+    <h2 id="installTitle">📲 홈 화면에 추가해서 쓰세요</h2>
+    <p id="installDescription">A STORE 매장 사진은 홈 화면 앱으로만 써요. 주소창 없이 앱처럼 열리고, 본사 취합 업로드도 홈 화면 앱에서만 돼요.</p>
+    <div id="installIOS" hidden>
+      <ol class="install-steps">
+        <li><span>주소창 옆 ··· 버튼</span></li>
+        <li><span>공유 <svg class="install-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="공유"><path d="M12 15V2m-4 4 4-4 4 4M7 10H4v12h16V10h-3"/></svg>(안 보이면 '더 보기')</span></li>
+        <li><span>목록을 위로 밀어 '홈 화면에 추가'</span></li>
+        <li><span>'웹 앱으로 열기' 켜 둔 채 오른쪽 위 '추가'</span></li>
+      </ol>
+      <p class="install-note">공유 버튼 <svg class="install-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="공유"><path d="M12 15V2m-4 4 4-4 4 4M7 10H4v12h16V10h-3"/></svg>이 아래에 바로 보이면 그걸 눌러도 돼요(설정에 따라 달라요)</p>
+    </div>
+    <div id="installOther" hidden>
+      <p><strong>아이폰 사파리로 이 주소를 열어 홈 화면에 추가해 주세요</strong></p>
+      <span class="install-address" id="installAddress"></span>
+      <button class="install-copy" id="installCopy" type="button">주소 복사</button>
+      <p class="install-copy-status" id="installCopyStatus" role="status"></p>
+    </div>
+    <p class="install-open">추가한 뒤에는 홈 화면의 A STORE 아이콘으로 여세요</p>
+  </div>
+</section>
 
 <script>
-const APP_VERSION = "2026-10-28.3"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.4"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -973,7 +1026,27 @@ document.addEventListener("visibilitychange", () => {
 /* ---------- Headquarters collection ---------- */
 const standalone = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
 const deviceId = ls.get("deviceId") || uid(); ls.set("deviceId", deviceId);
-$("hqHint").hidden = standalone;
+if (!standalone) {
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  document.body.classList.add("install-required");
+  $("appSurface").inert = true;
+  $("appSurface").setAttribute("aria-hidden", "true");
+  $("installGate").hidden = false;
+  $("installIOS").hidden = !isIOS;
+  $("installOther").hidden = isIOS;
+  $("installAddress").textContent = location.href;
+  $("installCopy").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      $("installCopyStatus").textContent = "주소를 복사했어요";
+    } catch {
+      const range = document.createRange(); range.selectNodeContents($("installAddress"));
+      const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+      $("installCopyStatus").textContent = "주소를 길게 누르거나 선택한 주소를 복사해 주세요";
+    }
+  };
+  $("installGate").querySelector(".install-card").focus({ preventScroll:true });
+}
 let selectedHQ = null;
 let hqProjects = [], statusVersion = 0, camHQ = null, sessionPhotos = [], albumHQ = null;
 let sending = false, retryTimer, retryDelay = 2000, batchDone = 0, batchTotal = 0;
