@@ -307,6 +307,7 @@ svg { display: block; }
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <h2 id="settingsTitle">설정</h2>
     <p>Hub 관리자 계정으로 로그인해요. 매장 직원은 쓸 일이 없어요.</p>
+    <p id="testModeStatus" hidden>테스트 모드 켜짐 · <button type="button" id="disableTestMode">끄기</button></p>
     <div class="btns"><button type="button" id="appInfoBtn">앱 정보</button><button type="button" class="del" id="adminPageBtn">관리자 페이지 열기</button></div>
     <button class="chip" id="settingsClose" type="button">닫기</button>
   </div>
@@ -350,6 +351,9 @@ const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate
 const todayKey = () => dayKey(new Date());
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+if (location.hash === "#test") ls.set("testMode", "1");
+else if (location.hash === "#notest") ls.set("testMode", "0");
+let testMode = ls.get("testMode") === "1";
 function prettyDay(key) {
   const [y, m, d] = key.split("-").map(Number), dt = new Date(y, m - 1, d);
   const s = `${pad(m)}.${pad(d)} (${WEEK[dt.getDay()]})`;
@@ -389,10 +393,14 @@ const thumbURL = p => { if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(
 
 const storeSel = $("store");
 let hubStores = [];
+let testStore = null;
 try { hubStores = JSON.parse(ls.get("hqStores") || "[]"); if (!Array.isArray(hubStores) || hubStores.some(x => !x || !x.name || x.store_id == null)) hubStores = []; } catch {}
 function populateStores() {
   const selected = storeSel.value || ls.get("store") || "";
   storeSel.length = 1;
+  if (testMode && testStore) {
+    const o = document.createElement("option"); o.value = "테스트점"; o.textContent = "🧪 테스트점"; storeSel.appendChild(o);
+  }
   const groups = {};
   if (hubStores.length) for (const st of hubStores) {
     const group = Object.keys(STORES).find(g => STORES[g].includes(st.name)) || st.region || st.category || "점포";
@@ -408,6 +416,13 @@ function populateStores() {
 }
 function syncStore() { $("storeName").textContent = storeSel.value || "점포 선택"; $("storePill").classList.toggle("unset", !storeSel.value); }
 populateStores();
+function syncTestModeSettings() { $("testModeStatus").hidden = !testMode; }
+syncTestModeSettings();
+$("disableTestMode").onclick = () => {
+  testMode = false; ls.set("testMode", "0"); testStore = null; populateStores();
+  if (storeSel.value === "테스트점") { storeSel.value = ""; ls.set("store", ""); syncStore(); render(); }
+  syncTestModeSettings(); loadStores();
+};
 storeSel.onchange = () => { ls.set("store", storeSel.value); syncStore(); hqProjects = []; render(); refreshHQ(); };
 $("today").textContent = ymd(new Date());
 
@@ -502,7 +517,7 @@ async function photoFromFile(file, project, fromCamera, hq = null) {
 }
 function fileName(p) {
   const pr = projects.find(x => x.id === p.projectId), d = new Date(p.taken);
-  const parts = [p.store || storeSel.value || "매장사진"];
+  const parts = [(p.store || storeSel.value || "매장사진").replace(/^🧪\s*/, "")];
   if (pr?.name) parts.push(safeName(pr.name));
   parts.push(`${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`);
   return parts.join("_") + ".jpg";
@@ -754,7 +769,7 @@ const deviceId = ls.get("deviceId") || uid(); ls.set("deviceId", deviceId);
 $("hqHint").hidden = standalone;
 let hqProjects = [], statusVersion = 0, camHQ = null, sessionPhotos = [], albumHQ = null;
 let sending = false, retryTimer, retryDelay = 2000, batchDone = 0, batchTotal = 0;
-const storeId = () => hubStores.find(x => x.name === storeSel.value)?.store_id;
+const storeId = () => storeSel.value === "테스트점" ? testStore?.store_id : hubStores.find(x => x.name === storeSel.value)?.store_id;
 const same = (a, b) => String(a) === String(b);
 async function hubFetch(path, options) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
@@ -763,10 +778,15 @@ async function hubFetch(path, options) {
 }
 async function loadStores() {
   try {
-    const r = await hubFetch("/api/store-photo/stores"); if (!r.ok) throw Error();
+    const r = await hubFetch(`/api/store-photo/stores${testMode ? "?test=1" : ""}`); if (!r.ok) throw Error();
     const list = await r.json();
     if (!Array.isArray(list) || !list.length || list.some(x => !x.name || x.store_id == null)) throw Error();
-    hubStores = list; ls.set("hqStores", JSON.stringify(list)); populateStores();
+    if (testMode) {
+      testStore = list[0]?.name === "🧪 테스트점" || list[0]?.name === "테스트점" ? { ...list[0], name: "테스트점" } : null;
+      hubStores = testStore ? list.slice(1) : list;
+      ls.set("hqStores", JSON.stringify(hubStores));
+    } else { testStore = null; hubStores = list; ls.set("hqStores", JSON.stringify(list)); }
+    populateStores();
   } catch {} // Cached list or the original STORES remains available for personal use.
   refreshHQ();
 }
