@@ -296,7 +296,7 @@ body:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) 
 body.hq-expanded { overflow:hidden; }
 body.hq-expanded .main { height:calc(100dvh - var(--st) - 54px - var(--dock-h)); padding-top:8px; padding-bottom:8px; display:block; overflow:hidden; }
 body.hq-expanded .hero, body.hq-expanded #hqProgress { display:none; }
-body.hq-expanded #hqCards { height:100%; min-height:0; display:grid; grid-template-rows:auto minmax(0, 1fr) minmax(0, 1.55fr); gap:8px; }
+body.hq-expanded #hqCards { height:100%; min-height:0; display:grid; grid-template-rows:auto minmax(0, 1fr); gap:8px; }
 body.hq-expanded .hq-rail { padding:0 0 3px; }
 body.hq-expanded .hq-summary { padding:7px 11px; gap:3px; }
 body.hq-expanded .hq-summary .hq-queue, body.hq-expanded .hq-summary .hq-meta, body.hq-expanded .hq-summary .hq-state { display:none; }
@@ -328,13 +328,20 @@ body.dragging-photo, body.dragging-photo * { user-select:none !important; -webki
 @media (max-height:650px) { body.hq-expanded .hq-summary .hq-meta { display:none; } }
 /* Headquarters overview follows the 390 × 844 mockup. */
 body.hq-expanded .main { height:calc(100dvh - var(--st) - 54px); padding:4px var(--gutter-r) calc(var(--dock-h) + 12px) var(--gutter); display:flex; flex-direction:column; gap:12px; }
-body.hq-expanded #hqCards { height:100%; display:flex; flex-direction:column; gap:12px; }
-body.hq-expanded .hq-rail { flex:none; padding:1px 0; gap:12px; }
+body.hq-expanded #hqCards { height:100%; display:grid; grid-template-rows:auto minmax(0, 1fr); gap:12px; }
+body.hq-expanded .hq-rail { flex:none; min-height:0; align-items:flex-start; padding:1px 0; gap:12px; overflow-y:hidden; scrollbar-width:none; transition:height .2s ease; }
+body.hq-expanded .hq-rail::-webkit-scrollbar { display:none; }
+@media (prefers-reduced-motion:reduce) { body.hq-expanded .hq-rail { transition:none; } }
 body.hq-expanded .hq-summary { flex:0 0 100%; display:flex; flex-direction:column; gap:0; padding:14px; border-radius:20px; background:#1b1712; }
 body.hq-expanded .hq-summary:only-child { flex-basis:100%; }
 body.hq-expanded .hq-summary .hq-card-title .hq-meta { display:block; }
 body.hq-expanded .hq-summary .hq-state { display:inline-flex; }
 body.hq-expanded:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) + 12px); }
+body.hq-expanded .hq-summary .section-head { margin:8px 0 6px; }
+body.hq-expanded .hq-slot-rail .hq-cell { flex-basis:92px; }
+body.hq-expanded .hq-slot-rail .hq-tile { width:92px; height:92px; }
+body.hq-expanded .hq-summary .page-dots { margin-top:6px; }
+body.hq-expanded .hq-summary .hq-send { height:40px; margin-top:8px; }
 body.hq-expanded .hq-summary.open-glow::after { border-radius:18px; background:#1b1712; }
 .hq-summary > :not(.hq-sparks) { position:relative; z-index:2; }
 .hq-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
@@ -365,13 +372,40 @@ body.hq-expanded .hq-summary.open-glow::after { border-radius:18px; background:#
 .hq-summary .page-dots { margin-top:10px; }
 .hq-summary .hq-send { display:flex; justify-content:center; align-items:center; gap:8px; height:50px; margin-top:12px; padding:0 12px; border-radius:14px; font-size:16px; }
 .hq-summary .hq-send svg { width:20px; height:20px; }
-.vault-area { flex:1; display:flex; flex-direction:column; gap:10px; min-height:0; padding:14px; border:1px solid var(--line); border-radius:20px; background:var(--panel); margin-bottom:0; }
+.vault-area { flex:1; display:flex; flex-direction:column; gap:4px; min-height:0; padding:10px; border:1px solid var(--line); border-radius:20px; background:var(--panel); margin-bottom:0; }
 .vault-area .section-head { font-size:13px; }
 .vault-area .section-head small { font-size:12px; font-weight:400; }
-.vault-rail { flex:1; min-height:0; align-items:center; }
-.vault-page { flex:0 0 100%; min-width:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(2,auto); gap:8px; align-content:center; }
+.vault-rail { flex:1; min-height:0; container-type:size; align-items:stretch; }
+.vault-page { --tile:min(calc((100cqw - 16px)/3),calc((100cqh - 8px)/2)); flex:0 0 100%; min-width:0; height:100%; display:grid; grid-template-columns:repeat(3,var(--tile)); grid-template-rows:repeat(2,var(--tile)); gap:8px; align-content:start; justify-content:center; }
 .vault-page .thumb { width:100%; height:auto; aspect-ratio:1; border-radius:12px; }
-.vault-hint { color:var(--muted); font-size:11.5px; text-align:center; }
+.vault-hint { color:var(--muted); font-size:10px; text-align:center; white-space:nowrap; flex:none; }
+.vault-area .section-head { flex-wrap:nowrap; gap:6px; flex:none; white-space:nowrap; }
+.vault-area .section-head > span { font-size:12px; }
+.vault-area .section-head small { font-size:10px; }
+.vault-actions { width:100%; display:flex; align-items:center; gap:8px; font-size:12px; white-space:nowrap; }
+.vault-actions button { color:var(--stamp); padding:5px 0; }
+.thumb .unsaved { position:absolute; bottom:5px; right:5px; border-radius:4px; padding:1px 4px; background:#000b; color:var(--stamp); font-size:9px; pointer-events:none; }
+.broken-photo { background:var(--panel-3); display:flex; flex-direction:column; justify-content:center; align-items:center; gap:3px; text-align:center; font-size:10px; }
+.broken-photo > span { pointer-events:none; }
+.broken-photo > button { font-size:11px; color:var(--err); padding:3px 8px; z-index:3; }
+.thumb.broken-photo { justify-content:flex-end; padding:44px 2px 3px; gap:0; }
+.thumb.broken-photo > span { line-height:1.2; }
+.thumb.broken-photo > button { padding:2px 8px; line-height:1.2; }
+@media (max-height:700px) {
+  body.hq-expanded #hqCards { gap:6px; }
+  .vault-area { padding:8px; gap:4px; }
+  .vault-area .section-head, .vault-area .section-head small, .vault-actions { font-size:11px; }
+  .vault-actions button { padding:2px 0; }
+  .vault-hint { font-size:9px; line-height:1.25; }
+  body.hq-expanded .hq-summary { padding:8px 12px; }
+  body.hq-expanded .hq-summary .section-head { margin:4px 0; }
+  body.hq-expanded .hq-slot-rail .hq-cell { flex-basis:64px; gap:3px; }
+  body.hq-expanded .hq-slot-rail .hq-tile { width:64px; height:64px; }
+  body.hq-expanded .hq-summary .hq-caption { -webkit-line-clamp:1; max-height:1.3em; }
+  body.hq-expanded .hq-summary .page-dots { margin-top:4px; min-height:6px; }
+  body.hq-expanded .hq-summary .hq-send { height:34px; margin-top:6px; font-size:13px; }
+  .thumb.broken-photo { font-size:9px; }
+}
 body.hq-expanded #saveBtn, body.hq-expanded #uploadBtn { display:none; }
 body.hq-expanded #logDockBtn { display:flex; }
 body.hq-expanded .dock { background:#000; }
@@ -577,7 +611,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.8"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.9"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -656,7 +690,56 @@ const del = (store, id) => tx(store, "readwrite", s => { s.delete(id); });
 let projects = [], photos = [];
 const sel = new Set();
 const urls = new Map();   // photo id -> thumb object URL
-const thumbURL = p => { if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(p.thumb)); return urls.get(p.id); };
+const thumbRepairs = new Map();
+function clearThumb(id) {
+  if (urls.has(id)) { URL.revokeObjectURL(urls.get(id)); urls.delete(id); }
+}
+async function repairThumb(p, failedURL) {
+  if (p.broken || thumbRepairs.has(p.id) || urls.get(p.id) !== failedURL) return;
+  // Register before decoding so simultaneous failures share one attempt.
+  thumbRepairs.set(p.id, "repairing"); clearThumb(p.id);
+  let canvas;
+  try {
+    const image = await loadImage(p.blob);
+    const w = image.naturalWidth, h = image.naturalHeight, scale = THUMB / Math.min(w, h);
+    canvas = resize(image, w, h, Math.round(w * scale), Math.round(h * scale));
+    const thumb = await toBlob(canvas, 0.78);
+    if (!thumb?.size) throw Error("decode");
+    if (!photos.includes(p)) return;
+    p.thumb = thumb;
+  } catch {
+    if (!photos.includes(p)) return;
+    p.broken = true;
+  } finally { if (canvas) canvas.width = canvas.height = 0; }
+  if (!photos.includes(p)) return;
+  thumbRepairs.set(p.id, "done");
+  await put("photos", p).catch(() => {});
+  render();
+}
+function thumbURL(p, image = new Image()) {
+  if (p.broken) return "";
+  if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(p.thumb));
+  const url = urls.get(p.id);
+  image.onerror = () => {
+    if (thumbRepairs.get(p.id) === "done" && urls.get(p.id) === url) {
+      clearThumb(p.id); p.broken = true; render();
+    } else repairThumb(p, url);
+  };
+  image.src = url;
+  return url;
+}
+function brokenPhoto(el, p) {
+  el.classList.add("broken-photo");
+  const text = document.createElement("span"); text.textContent = "파일 없음";
+  const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "지우기";
+  remove.onclick = async e => {
+    e.stopPropagation();
+    if (!confirm("사진을 지울까요? 삭제한 사진은 되돌릴 수 없어요.")) return;
+    await del("photos", p.id); clearThumb(p.id); sel.delete(p.id);
+    photos = photos.filter(x => x !== p); render();
+  };
+  el.append(text, remove);
+}
 
 const storeSel = $("store");
 let hubStores = [];
@@ -831,7 +914,7 @@ function fileName(p) {
 }
 
 /* ---------- Main list ---------- */
-function defaultSelect() { sel.clear(); const t = todayKey(); for (const p of photos) if (!p.hq && projects.find(x => x.id === p.projectId)?.day === t) sel.add(p.id); }
+function defaultSelect() { sel.clear(); if (document.body.classList.contains("hq-expanded")) return; const t = todayKey(); for (const p of photos) if (!p.hq && projects.find(x => x.id === p.projectId)?.day === t) sel.add(p.id); }
 
 function render() {
   const g = $("groups"); g.textContent = "";
@@ -887,7 +970,12 @@ function thumbEl(p) {
   const el = document.createElement("div");
   el.className = "thumb" + (sel.has(p.id) ? " sel" : "");
   el.innerHTML = `<img alt="" loading="lazy" decoding="async" draggable="false">${p.saved ? '<span class="saved">저장됨</span>' : ""}`;
-  el.querySelector("img").src = thumbURL(p);
+  if (p.broken) { el.querySelector("img").remove(); brokenPhoto(el, p); }
+  else thumbURL(p, el.querySelector("img"));
+  if (!p.hq && !p.saved && !p.broken) {
+    const badge = document.createElement("span"); badge.className = "unsaved";
+    badge.textContent = "미저장"; el.appendChild(badge);
+  }
   if (p.sent || p.sendError || p.paused) {
     const badge = document.createElement("span"); badge.className = "saved sent" + (p.sendError ? " send-error" : "");
     badge.textContent = p.paused ? "대기 중" : p.sendError ? "못 보냄" : "전송됨"; el.appendChild(badge);
@@ -903,7 +991,7 @@ function updateCounts() {
   $("badge").hidden = !n; $("badge").textContent = n;
   $("saveBtn").disabled = !n; $("delBtn").disabled = !n;
   const hq = photos.filter(p => p.hq);
-  const waiting = hq.filter(p => !p.sent && same(p.hq.storeId, storeId()) && !missingHQ(p)).length;
+  const waiting = hq.filter(p => !p.broken && !p.sent && same(p.hq.storeId, storeId()) && !missingHQ(p)).length;
   $("uploadBtn").hidden = true;
   $("uploadBadge").hidden = !waiting; $("uploadBadge").textContent = waiting;
   $("saveBtn").hidden = false;
@@ -919,6 +1007,8 @@ let toastT;
 function toast(t) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2400); }
 const canShare = files => { try { return !!(navigator.canShare && navigator.canShare({ files })); } catch { return false; } };
 async function saveList(list) {
+  list = list.filter(p => !p.broken);
+  if (!list.length) return;
   const files = list.map(p => new File([p.blob], fileName(p), { type: "image/jpeg" }));
   if (canShare(files)) await navigator.share({ files });
   else for (const p of list) {
@@ -928,8 +1018,8 @@ async function saveList(list) {
   for (const p of list) { p.saved = true; await put("photos", p); }
 }
 $("saveBtn").onclick = async () => {
-  const list = photos.filter(p => sel.has(p.id)).sort((a, b) => a.ts - b.ts);
-  if (!list.length) return;
+  const list = photos.filter(p => sel.has(p.id) && !p.broken).sort((a, b) => a.ts - b.ts);
+  if (!list.length) return toast("저장할 수 있는 사진이 없어요");
   try { await saveList(list); toast(`${list.length}장 저장했어요`); sel.clear(); render(); }
   catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 다시 시도해 주세요."); }
 };
@@ -965,7 +1055,7 @@ function photoControls(el, item, group) {
   const preview = document.createElement("button"); preview.type = "button"; preview.className = "photo-preview";
   preview.setAttribute("aria-label", "사진 크게 보기"); preview.innerHTML = `<span>${MAGNIFY}</span>`;
   preview.onclick = e => { e.stopPropagation(); openViewer(item, group()); };
-  el.append(check, preview);
+  el.appendChild(check); if (!local?.broken) el.appendChild(preview);
 }
 document.addEventListener("contextmenu", e => { if (e.target.closest(".grid")) e.preventDefault(); });
 let viewing = null, viewURL = null, viewItems = [], viewIndex = 0, viewHQ = null;
@@ -1285,9 +1375,21 @@ function projectPeriod(project) {
 const cardVisibility = typeof IntersectionObserver === "function" ? new IntersectionObserver(entries => {
   for (const entry of entries) entry.target.classList.toggle("in-view", entry.isIntersecting && !document.hidden);
 }) : null;
+function fitHQRail() {
+  if (!document.body.classList.contains("hq-expanded")) return;
+  const rail = $("hqCards").querySelector(".hq-rail");
+  const active = rail?.querySelector(".hq-summary.active");
+  if (!active) return;
+  const style = getComputedStyle(rail);
+  rail.style.height = (active.getBoundingClientRect().height + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom)) + "px";
+}
+const hqCardSize = typeof ResizeObserver === "function" ? new ResizeObserver(fitHQRail) : null;
+window.addEventListener("resize", fitHQRail);
 function renderHQ() {
   cardVisibility?.disconnect();
+  hqCardSize?.disconnect();
   const root = $("hqCards"), scroll = root.querySelector(".hq-rail")?.scrollLeft || 0;
+  const previousRailHeight = document.body.classList.contains("hq-expanded") ? root.querySelector(".hq-rail")?.getBoundingClientRect().height : 0;
   const slotScroll = root.querySelector(".hq-summary.active .hq-slot-rail")?.scrollLeft || 0;
   const vaultScroll = root.querySelector(".vault-rail")?.scrollLeft || 0;
   root.textContent = "";
@@ -1301,6 +1403,7 @@ function renderHQ() {
   }
   if (selectedHQ === undefined || (selectedHQ !== null && !visible.some(p => same(p.id, selectedHQ)))) selectedHQ = visible[0].id;
   const expanded = selectedHQ !== null;
+  if (expanded && !document.body.classList.contains("hq-expanded")) sel.clear();
   document.body.classList.toggle("hq-expanded", expanded);
   $("logDockBtn").hidden = !expanded;
   $("dock").hidden = false; $("groups").hidden = expanded; $("newProj").hidden = expanded;
@@ -1310,7 +1413,7 @@ function renderHQ() {
     const paused = projectPaused(project.id), active = same(selectedHQ, project.id);
     const slots = activeHQSlots(project);
     const filled = slots.filter(slot => !!slotPhoto(project, slot.key)).length;
-    const waiting = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.sent);
+    const waiting = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.broken && !p.sent);
     const box = document.createElement("section");
     box.className = "hq-summary" + (active ? " active" : "") + (paused ? " paused-glow" : " open-glow");
     if (!paused) {
@@ -1377,6 +1480,15 @@ function renderHQ() {
     rail.appendChild(box);
   }
   root.appendChild(rail);
+  if (expanded) {
+    if (previousRailHeight) {
+      rail.style.height = previousRailHeight + "px";
+      rail.getBoundingClientRect(); // Start the transition at the previous visible height after a redraw.
+    }
+    fitHQRail();
+    const activeCard = rail.querySelector(".hq-summary.active");
+    if (activeCard) hqCardSize?.observe(activeCard);
+  }
   rail.scrollLeft = scroll;
   const activeSlotRail = rail.querySelector(".hq-summary.active .hq-slot-rail");
   if (activeSlotRail) { activeSlotRail.scrollLeft = slotScroll; activeSlotRail.onscroll(); }
@@ -1394,13 +1506,27 @@ function renderHQ() {
     const vaultTitle = document.createElement("span"); vaultTitle.textContent = "내 보관함 · 아직 안 보냄";
     const personal = photos.filter(p => !p.hq).sort((a,b) => b.ts - a.ts);
     const vaultCount = document.createElement("small");
-    vaultHead.append(vaultTitle, vaultCount); vault.appendChild(vaultHead);
+    vaultHead.append(vaultTitle, vaultCount);
+    const unsaved = personal.filter(p => !p.saved && !p.broken).length;
+    const chosen = personal.filter(p => sel.has(p.id));
+    if (chosen.length) {
+      const actions = document.createElement("div"); actions.className = "vault-actions";
+      const count = document.createElement("span"); count.textContent = `${chosen.length}장 선택 ·`;
+      actions.appendChild(count);
+      for (const [label, action] of [["사진첩에 저장", () => $("saveBtn").onclick()],
+        ["지우기", () => $("delBtn").onclick()], ["해제", () => { sel.clear(); render(); }]]) {
+        const button = document.createElement("button"); button.type = "button";
+        button.textContent = label; button.onclick = action; actions.appendChild(button);
+      }
+      vaultHead.replaceChildren(actions);
+    }
+    vault.appendChild(vaultHead);
     const vaultRail = document.createElement("div"); vaultRail.className = "vault-rail";
     const pages = Math.max(1, Math.ceil(personal.length / 6));
     for (let page = 0; page < pages; page++) {
       const panel = document.createElement("div"); panel.className = "vault-page";
       const items = personal.slice(page * 6, page * 6 + 6);
-      if (!items.length) { const empty = document.createElement("div"); empty.className = "vault-empty"; empty.textContent = "바로 찍은 사진이 여기에 쌓여요"; panel.appendChild(empty); }
+      if (!items.length) { const empty = document.createElement("div"); empty.className = "vault-empty"; empty.textContent = "바로 찍은 사진이 여기에 쌓여요 · 꾹 눌러 위 칸으로 끌어 놓아요"; panel.appendChild(empty); }
       for (const p of items) { const thumb = thumbEl(p); installVaultDrag(thumb, p); panel.appendChild(thumb); }
       vaultRail.appendChild(panel);
     }
@@ -1410,11 +1536,11 @@ function renderHQ() {
     vaultRail.onscroll = () => {
       const page = Math.min(pages - 1, Math.round(vaultRail.scrollLeft / Math.max(1, vaultRail.clientWidth)));
       dots.querySelectorAll("i").forEach((dot,i) => dot.classList.toggle("active", i === page));
-      vaultCount.textContent = personal.length + "장 · " + (page + 1) + "/" + pages + "쪽";
+      vaultCount.textContent = personal.length + "장 · " + (unsaved ? "미저장 " + unsaved + "장 · " : "") + (page + 1) + "/" + pages + "쪽";
     };
     vault.appendChild(dots);
     const hint = document.createElement("div"); hint.className = "vault-hint";
-    hint.textContent = "사진을 꾹 눌러 위 칸으로 끌어 놓으면 채워져요";
+    hint.textContent = "보관함 사진은 이 폰에만 있어요 · 앱을 지우면 함께 지워져요";
     vault.appendChild(hint); root.appendChild(vault);
     vaultRail.scrollLeft = vaultScroll; vaultRail.onscroll();
   }
@@ -1422,13 +1548,14 @@ function renderHQ() {
 function hqTile(project, item, slot) {
   const cell = document.createElement("div"); cell.className = "hq-cell";
   cell._hqSlot = slot; cell._hqItem = item; cell._hqProject = project;
-  const el = document.createElement("button"); el.type = "button"; el.className = "hq-tile";
+  const el = document.createElement(item?.broken ? "div" : "button"); if (!item?.broken) el.type = "button"; el.className = "hq-tile";
   const local = !!item?.hq, requested = item?.status === "requested";
   if (item) {
-    try { el.style.backgroundImage = `url(${JSON.stringify(local ? thumbURL(item) : new URL(item.thumb_url, SERVER).href)})`; } catch {}
+    if (local && item.broken) brokenPhoto(el, item);
+    else try { el.style.backgroundImage = `url(${JSON.stringify(local ? thumbURL(item) : new URL(item.thumb_url, SERVER).href)})`; } catch {}
     el.classList.toggle("requested", requested); el.classList.toggle("error", !!item.sendError);
   } else { el.classList.add("empty"); el.innerHTML = '<span class="hq-tile-empty">' + CAMPLUS + '<span>눌러서 찍기</span></span>'; }
-  if (item) {
+  if (item && !item.broken) {
     const mag = document.createElement("span"); mag.className = "hq-mag"; mag.innerHTML = MAGNIFY; el.appendChild(mag);
   }
   const caption = document.createElement("span"); caption.className = "hq-caption";
@@ -1440,13 +1567,14 @@ function hqTile(project, item, slot) {
   if (request?.request_note || requested) {
     const note = document.createElement("span"); note.className = "hq-note"; note.textContent = `수정요청: ${request?.request_note || "사진을 교체해 주세요"}`; cell.appendChild(note);
   }
-  if (item && !requested) {
+  if (item && !item.broken && !requested) {
     const status = document.createElement("span");
     status.textContent = item.paused || projectPaused(project.id) ? "잠시 멈춤" : item.sendError ? "전송 실패" : local && !item.sent ? "보내기 전" : "전송됨";
     status.className = "hq-tile-status" + (status.textContent === "전송됨" ? " sent" : item.sendError ? " failed" : "");
     el.appendChild(status);
   }
   el.onclick = () => {
+    if (item?.broken) return;
     if (requested || !item) chooseHQSlot(project, slot, requested ? item : null);
     else openHQViewer(project, item, slot);
   };
@@ -1506,7 +1634,7 @@ async function movePhotoToSlot(photo, cell) {
 function installVaultDrag(el, photo) {
   el.onpointerdown = e => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (vaultDrag) return;
+    if (vaultDrag || photo.broken || e.target.closest("button")) return;
     const drag = { id:e.pointerId, source:el, photo, startX:e.clientX, startY:e.clientY, x:e.clientX, y:e.clientY, rect:el.getBoundingClientRect(), active:false, hover:null };
     vaultDrag = drag;
     const clean = () => {
@@ -1547,7 +1675,7 @@ function installVaultDrag(el, photo) {
     drag.timer = setTimeout(() => {
       if (vaultDrag !== drag) return;
       drag.active = true; drag.ghost = document.createElement("img"); drag.ghost.className = "drag-ghost";
-      drag.ghost.src = thumbURL(photo); drag.ghost.alt = "";
+      thumbURL(photo, drag.ghost); drag.ghost.alt = "";
       drag.ghost.style.width = `${drag.rect.width}px`; drag.ghost.style.height = `${drag.rect.height}px`;
       document.body.appendChild(drag.ghost); el.classList.add("drag-source");
       document.body.classList.add("dragging-photo"); document.body.style.touchAction = "none"; el.style.touchAction = "none";
@@ -1608,7 +1736,7 @@ function confirmHQSend(project, count) {
 }
 async function sendProjectHQ(project) {
   if (sending || projectPaused(project.id)) return;
-  const list = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.sent && !missingHQ(p));
+  const list = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.broken && !p.sent && !missingHQ(p));
   if (!list.length) return toast("보낼 사진이 없어요");
   if (!(await confirmHQSend(project, list.length))) return;
   for (const p of list) { delete p.sendError; delete p.retryable; await put("photos", p); }
@@ -1697,7 +1825,7 @@ async function resumeUploads() {
 $("uploadStrip").onclick = () => openLog();
 $("logDockBtn").onclick = () => openLog(selectedHQ);
 function sendState(p) {
-  return missingHQ(p) ? "missing" : p.sent ? "complete" : p.paused || projectPaused(p.hq.projectId) ? "paused" : p.sendError ? "failed" : activeUpload === p.id ? "sending" : "waiting";
+  return p.broken ? "broken" : missingHQ(p) ? "missing" : p.sent ? "complete" : p.paused || projectPaused(p.hq.projectId) ? "paused" : p.sendError ? "failed" : activeUpload === p.id ? "sending" : "waiting";
 }
 async function recordSend(p, state, msg, show = true) {
   if (show) uploadProgress(msg);
@@ -1724,13 +1852,15 @@ function renderLog() {
     .sort((a,b) => (b.log?.at(-1)?.at || b.ts) - (a.log?.at(-1)?.at || a.ts));
   for (const p of list) {
     const row = document.createElement("div"); row.className = "log-row";
-    const image = document.createElement("img"); image.src = thumbURL(p); image.alt = ""; row.appendChild(image);
+    const image = document.createElement("img"); image.alt = "";
+    if (p.broken) { const missing = document.createElement("div"); brokenPhoto(missing, p); row.appendChild(missing); }
+    else { thumbURL(p, image); row.appendChild(image); }
     const info = document.createElement("div"), title = document.createElement("strong");
     const remote = hqProjects.find(x => same(x.id, p.hq.projectId));
     title.textContent = `${remote?.name || projects.find(x => x.id === p.projectId)?.name || p.hq.projectName || "본사 취합"} · ${remote?.preset?.find(x => same(x.key, p.hq.slot))?.name || p.hq.slotName || p.hq.slot || "자유 촬영"}`;
     info.appendChild(title);
     const state = sendState(p), status = document.createElement("p"); status.className = state;
-    status.textContent = ({ missing:"보낼 곳 없음 — 프로젝트가 닫혔거나 바뀌었어요", waiting:"대기", sending:"보내는 중", complete:"완료", paused:"잠시 멈춤", failed:`실패: ${p.sendError || "다시 보내 주세요"}` })[state]; info.appendChild(status);
+    status.textContent = ({ broken:"사진 파일이 없어요", missing:"보낼 곳 없음 — 프로젝트가 닫혔거나 바뀌었어요", waiting:"대기", sending:"보내는 중", complete:"완료", paused:"잠시 멈춤", failed:`실패: ${p.sendError || "다시 보내 주세요"}` })[state]; info.appendChild(status);
     const time = document.createElement("p"); time.textContent = `${p.hq.storeName || p.store} · 시도 ${p.tries || 0}회 · ${new Date(p.log?.at(-1)?.at || p.ts).toLocaleString("ko-KR")}`; info.appendChild(time);
     if (["waiting", "failed", "paused"].includes(state)) {
       const retry = document.createElement("button"); retry.type = "button"; retry.className = "chip"; retry.textContent = "다시 보내기"; retry.onclick = () => retryHQ([p]); info.appendChild(retry);
@@ -1780,7 +1910,7 @@ function uploadSucceeded(p) {
   el.hidden = false; clearTimeout(successTimer);
   successTimer = setTimeout(() => { el.hidden = true; successCount = 0; }, 2600);
 }
-const unsentHQ = (projectId = null) => photos.filter(p => p.hq && !p.sent && !missingHQ(p) && same(p.hq.storeId, storeId()) &&
+const unsentHQ = (projectId = null) => photos.filter(p => p.hq && !p.broken && !p.sent && !missingHQ(p) && same(p.hq.storeId, storeId()) &&
   (projectId === null || same(p.hq.projectId, projectId)) && (!p.sendError || p.retryable) && !p.paused && !projectPaused(p.hq.projectId));
 function showSendProgress(projectId) {
   $("hqProgress").hidden = !standalone || !unsentHQ(projectId).length;
