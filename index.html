@@ -462,7 +462,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.4"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.5"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -681,8 +681,8 @@ async function makePhoto(src, sw, sh, taken, before, project, hq = null) {
   const s = Math.min(1, MAX_EDGE / Math.max(sw, sh));
   const w = Math.round(sw * s), h = Math.round(sh * s);
   const c = resize(src, sw, sh, w, h);
-  const g = c.getContext("2d"), fs = Math.round(Math.max(w, h) * 0.022), m = Math.round(fs * 0.8);
-  g.font = `600 ${fs}px "Helvetica Neue", Arial, sans-serif`;
+  const g = c.getContext("2d"), fs = Math.round(Math.max(w, h) * 0.04), m = Math.round(fs * 0.8);
+  g.font = `700 ${fs}px "Helvetica Neue", Arial, sans-serif`;
   g.textAlign = "right"; g.textBaseline = "bottom";
   g.shadowColor = "rgba(0,0,0,.75)"; g.shadowBlur = fs * 0.25; g.shadowOffsetY = fs * 0.05;
   g.fillStyle = "#ffb43a"; g.fillText(ymd(taken), w - m, h - m);
