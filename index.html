@@ -207,19 +207,36 @@ svg { display: block; }
 .hq-list, .hq-card { display:grid; gap:12px; }
 .hq-card { background:var(--panel); border-radius:18px; padding:16px; }
 .hq-card.paused { background:var(--panel-2); color:var(--muted); }
-.hq-card.paused .hq-tile { filter:grayscale(1); opacity:.55; }
+.hq-card.paused .hq-tile { opacity:.75; }
 .hq-card h2, .hq-card h3 { margin:0; font-size:1.05em; }
 .hq-card h3 { font-size:.88em; color:var(--muted); }
 .hq-meta, .hq-hint, .hq-progress { color:var(--muted); font-size:.82em; margin:0; }
 .hq-progress { color:var(--stamp); }
-.hq-tile { position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--panel-3) center/cover; display:flex; flex-direction:column; justify-content:end; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; cursor:pointer; }
-.hq-tile.empty { align-items:center; justify-content:center; gap:8px; padding:8px; text-align:center; color:var(--muted); }
+.hq-cell { min-width:0; display:grid; gap:4px; }
+.hq-tile { position:relative; width:100%; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--panel-3) center/cover; display:flex; align-items:center; justify-content:center; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; cursor:pointer; }
+.hq-tile.empty { color:var(--muted); }
 .hq-tile svg { width:26px; height:26px; }
 .hq-tile.requested, .hq-tile.error { box-shadow:inset 0 0 0 2px var(--err); }
-.hq-caption { padding:5px 7px; background:rgba(0,0,0,.75); font-size:.72em; overflow-wrap:anywhere; pointer-events:none; }
-.hq-tile.requested .hq-caption, .hq-tile.error .hq-caption, .thumb .send-error { color:var(--err); }
+.hq-caption { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.72em; color:var(--muted); }
+.hq-note { font-size:.7em; color:var(--err); overflow-wrap:anywhere; }
+.hq-status { font-size:.68em; color:var(--stamp); }
+.hq-status::before { content:"● "; }
+.hq-status.sent { color:var(--ok); }
+.hq-status.failed { color:var(--err); }
+.thumb .send-error { color:var(--err); }
+.hq-send { width:100%; padding:15px; border-radius:14px; background:var(--stamp); color:#000; font-weight:800; font-size:1.05em; }
+.hq-send.retry { background:var(--err); }
+.hq-send:disabled { background:var(--panel-3); color:var(--muted); cursor:default; }
+.hq-send-result { color:var(--ok); font-weight:700; font-size:.88em; }
+#hqPick .sheet { gap:8px; }
+#hqPick button { width:100%; padding:14px; border-radius:12px; background:var(--panel-3); font-weight:700; }
+#hqPickCancel { color:var(--muted); }
+.viewer .hq-view-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 var(--gutter-r) calc(var(--sb) + 12px) var(--gutter); }
+.viewer .hq-view-actions button { flex:1; padding:10px; border-radius:10px; background:var(--panel-2); font-size:.85em; white-space:nowrap; }
+.viewer .hq-view-actions #vClear { color:var(--err); }
 .thumb .sent { bottom:auto; top:6px; color:var(--stamp); }
 #hqConfirm .confirm { background:var(--stamp); color:#000; }
+#hqConfirmTitle .store-highlight { color:var(--stamp); }
 #camSlot { position:absolute; top:8px; left:12px; right:12px; text-align:center; color:var(--stamp); background:rgba(0,0,0,.65); border-radius:10px; padding:6px; pointer-events:none; }
 /* Compact phone overview */
 .top { padding-top:calc(var(--st) + 7px); padding-bottom:7px; gap:8px; }
@@ -258,6 +275,7 @@ svg { display: block; }
 .log-row details { font-size:.76em; color:var(--muted); margin-top:6px; }
 /* Live upload strip and open-project light border */
 .upload-strip { position:fixed; left:var(--gutter); right:var(--gutter-r); bottom:calc(var(--dock-h) + 6px); z-index:7; max-width:728px; margin:auto; padding:9px 12px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2); text-align:left; font-size:.8em; overflow-wrap:anywhere; box-shadow:0 4px 16px #0008; }
+body:has(#dock[hidden]) .upload-strip { bottom:calc(var(--sb) + 6px); }
 body:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) + 90px); }
 .hq-summary { position:relative; isolation:isolate; overflow:hidden; }
 .hq-summary > button { position:relative; z-index:1; }
@@ -271,6 +289,40 @@ body:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) 
 @keyframes hq-orbit { to { transform:rotate(360deg); } }
 @keyframes hq-twinkle { 0%,100% { opacity:.15; } 50% { opacity:.85; } }
 @media (prefers-reduced-motion:reduce) { .hq-summary.open-glow::before, .hq-summary .hq-sparks::after { animation:none; will-change:auto; } .hq-summary.open-glow { border-color:var(--stamp); } }
+/* Open project: fixed send area, six-photo vault pages, and the always-visible dock. */
+body.hq-expanded { overflow:hidden; }
+body.hq-expanded .main { height:calc(100dvh - var(--st) - 54px - var(--dock-h)); padding-top:8px; padding-bottom:8px; display:block; overflow:hidden; }
+body.hq-expanded .hero, body.hq-expanded #hqProgress { display:none; }
+body.hq-expanded #hqCards { height:100%; min-height:0; display:grid; grid-template-rows:auto minmax(0, 1fr) minmax(0, 1.55fr); gap:8px; }
+body.hq-expanded .hq-rail { padding:0 0 3px; }
+body.hq-expanded .hq-summary { padding:7px 11px; gap:3px; }
+body.hq-expanded .hq-summary .hq-queue, body.hq-expanded .hq-summary .hq-meta, body.hq-expanded .hq-summary .hq-state { display:none; }
+body.hq-expanded .hq-summary .project-open { gap:2px; }
+body.hq-expanded .hq-summary .chip { padding:4px 9px; }
+.hq-card.send-area { min-height:0; padding:9px 10px; gap:6px; background:#ffb43a14; border:1px solid #ffb43a72; grid-template-rows:auto minmax(0, 1fr) auto; overflow:hidden; }
+.send-area .hq-send { padding:9px; font-size:.9em; }
+.section-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; min-width:0; font-weight:700; font-size:.9em; }
+.section-head small { color:var(--muted); font-size:.78em; font-weight:500; white-space:nowrap; }
+.hq-slot-rail { display:flex; gap:7px; overflow-x:auto; min-height:0; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.hq-slot-rail::-webkit-scrollbar, .vault-rail::-webkit-scrollbar { display:none; }
+.hq-slot-rail .hq-cell { flex:0 0 30%; scroll-snap-align:start; align-content:start; }
+.hq-slot-rail .hq-tile { width:100%; height:auto; max-height:calc(100% - 28px); aspect-ratio:1; }
+.hq-cell.drop-ready .hq-tile { box-shadow:inset 0 0 0 3px var(--stamp),0 0 15px #ffb43a88; transform:scale(1.05); }
+.hq-cell.drop-invalid .hq-tile { box-shadow:inset 0 0 0 2px #8e8e93; }
+.drop-label { position:absolute; inset:0; display:grid; place-items:center; padding:4px; background:#0009; color:var(--stamp); font-weight:800; font-size:.76em; text-align:center; pointer-events:none; }
+.drop-invalid .drop-label { color:#d1d1d6; }
+.vault-area { min-height:0; display:grid; grid-template-rows:auto minmax(0, 1fr) auto; gap:5px; padding:9px 10px; border-radius:16px; background:#1c1c1e; overflow:hidden; }
+.vault-rail { display:flex; overflow-x:auto; min-height:0; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.vault-page { flex:0 0 100%; min-width:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(2,minmax(0,1fr)); gap:4px; scroll-snap-align:start; }
+.vault-page .thumb { width:100%; height:100%; min-height:0; aspect-ratio:auto; border-radius:8px; }
+.vault-page .thumb.drag-source img { opacity:.35; }
+.vault-empty { grid-column:1 / -1; grid-row:1 / -1; display:grid; place-items:center; color:var(--muted); font-size:.85em; text-align:center; }
+.page-dots { display:flex; justify-content:center; align-items:center; gap:5px; min-height:10px; }
+.page-dots i { width:5px; height:5px; border-radius:50%; background:#777; }
+.page-dots i.active { width:13px; border-radius:5px; background:var(--stamp); }
+.drag-ghost { position:fixed; z-index:32; object-fit:cover; opacity:.7; transform:scale(1.08); pointer-events:none; border-radius:8px; box-shadow:0 18px 34px #000b; will-change:left,top; }
+body.dragging-photo, body.dragging-photo * { user-select:none !important; -webkit-user-select:none !important; -webkit-touch-callout:none !important; }
+@media (max-height:650px) { body.hq-expanded #hqCards { grid-template-rows:auto minmax(0, 1fr) minmax(0, 1.3fr); } body.hq-expanded .hq-summary .hq-meta { display:none; } }
 /* Browser-only home screen installation gate */
 body.install-required { overflow:hidden; }
 body.install-required #appSurface { pointer-events:none; user-select:none; filter:blur(5px) brightness(.35); }
@@ -342,7 +394,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
   <div class="groups" id="groups"></div>
 </main>
 
-<nav class="dock">
+<nav class="dock" id="dock">
   <input type="file" id="lib" accept="image/*" multiple>
   <label class="side" for="lib">
     <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg></span>
@@ -387,7 +439,8 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
   <div class="vtop"><span class="vname" id="vName"></span>
     <button class="cam-x" id="vClose" type="button" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
   <div class="vimg"><img id="vImg" alt="" draggable="false"></div>
-  <div class="vbot"><button class="chip" id="vPrev" type="button" aria-label="이전 사진">‹</button><span id="vInfo"></span><button class="chip" id="vNext" type="button" aria-label="다음 사진">›</button><button class="chip" id="vSave" type="button">이 사진 저장</button></div>
+  <div class="vbot"><button class="chip" id="vPrev" type="button" aria-label="이전 사진">‹</button><span id="vInfo"></span><button class="chip" id="vNext" type="button" aria-label="다음 사진">›</button><button class="chip" id="vSave" type="button">사진첩에 저장</button></div>
+  <div class="hq-view-actions" id="vHQActions" hidden><button id="vRetake" type="button">다시 찍기</button><button id="vReplaceAlbum" type="button">앨범에서 바꾸기</button><button id="vClear" type="button">칸 비우기</button></div>
 </div>
 
 <div class="scrim" id="sheet" hidden>
@@ -418,9 +471,17 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </div>
 
 <div class="scrim" id="hqConfirm" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hqConfirmTitle">
-  <h2 id="hqConfirmTitle"></h2><p>다른 점포를 고르면 그 점포 사진이 돼요</p>
-  <div class="btns"><button id="hqNo" type="button">취소</button><button id="hqYes" class="confirm" type="button">보내기</button></div>
+  <h2 id="hqConfirmTitle"></h2><p id="hqConfirmBody"></p>
+  <div class="btns"><button id="hqNo" type="button">취소</button><button id="hqYes" class="confirm" type="button">전송</button></div>
 </div></div>
+<div class="scrim" id="hqPick" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hqPickTitle">
+  <h2 id="hqPickTitle">사진 채우기</h2>
+  <button id="hqPickCamera" type="button">📷 카메라</button>
+  <button id="hqPickAlbum" type="button">🖼 앨범</button>
+  <button id="hqPickCancel" type="button">취소</button>
+</div></div>
+<input type="file" id="hqSlotCamera" accept="image/*" capture="environment">
+<input type="file" id="hqSlotAlbum" accept="image/*">
 <div class="scrim" id="hqFinish" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hqFinishTitle">
   <h2 id="hqFinishTitle">촬영을 마쳤어요</h2><p>완료를 눌러 방금 찍은 사진을 사진첩에도 저장해 주세요.</p>
   <div class="btns"><button id="hqFinishNo" type="button">닫기</button><button id="hqFinishYes" type="button">완료</button></div>
@@ -462,7 +523,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.5"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.6"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -699,7 +760,7 @@ async function makePhoto(src, sw, sh, taken, before, project, hq = null) {
     p.tries = 0; p.log = [{ at:Date.now(), state:p.paused ? "paused" : "waiting", msg:p.paused ? "잠시 멈춤" : "업로드 대기" }];
   }
   photos.push(p); await put("photos", p);
-  if (hq) { updateCounts(); renderHQ(); renderLog(); sendHQ(); }
+  if (hq) { updateCounts(); renderHQ(); renderLog(); }
   return p;
 }
 async function photoFromFile(file, project, fromCamera, hq = null) {
@@ -716,16 +777,16 @@ function fileName(p) {
 }
 
 /* ---------- Main list ---------- */
-function defaultSelect() { sel.clear(); const t = todayKey(); for (const p of photos) if (projects.find(x => x.id === p.projectId)?.day === t) sel.add(p.id); }
+function defaultSelect() { sel.clear(); const t = todayKey(); for (const p of photos) if (!p.hq && projects.find(x => x.id === p.projectId)?.day === t) sel.add(p.id); }
 
 function render() {
   const g = $("groups"); g.textContent = "";
   const t = todayKey();
-  const list = projects.map(pr => ({ pr, ph: photos.filter(p => p.projectId === pr.id).sort((a, b) => a.ts - b.ts) }))
+  const list = projects.map(pr => ({ pr, ph: photos.filter(p => !p.hq && p.projectId === pr.id).sort((a, b) => a.ts - b.ts) }))
     .filter(x => x.ph.length).sort((a, b) => (b.pr.day.localeCompare(a.pr.day)) || (b.pr.ts - a.pr.ts));
   const has = list.length > 0;
   $("toolbar").hidden = !has; $("newProj").hidden = false;
-  const todayN = photos.filter(p => projects.find(x => x.id === p.projectId)?.day === t).length;
+  const todayN = photos.filter(p => !p.hq && projects.find(x => x.id === p.projectId)?.day === t).length;
   $("heroTitle").innerHTML = todayN ? `오늘 ${todayN}장 찍었어요` : "매장 사진 촬영";
   $("heroSub").textContent = has ? "오른쪽 위 원으로 선택하고, 돋보기로 크게 확인해요." : "가운데 버튼을 누르면 카메라가 열리고, 여러 장을 이어서 찍을 수 있어요.";
 
@@ -760,7 +821,7 @@ function render() {
       if (projectPaused(remote.id)) return toast("잠시 멈춤 중이에요");
       const slot = (remote.preset || []).find(x => !slotPhoto(remote, x.key));
       if (remote.preset?.length && !slot) return toast("본사 확인 전엔 다시 못 올려요");
-      beginHQ(remote, slot);
+      chooseHQSlot(remote, slot, null);
     };
     const grid = sec.querySelector(".grid");
     for (const p of ph) grid.appendChild(thumbEl(p));
@@ -777,23 +838,25 @@ function thumbEl(p) {
     const badge = document.createElement("span"); badge.className = "saved sent" + (p.sendError ? " send-error" : "");
     badge.textContent = p.paused ? "대기 중" : p.sendError ? "못 보냄" : "전송됨"; el.appendChild(badge);
   }
-  photoControls(el, p, () => photos.filter(x => x.projectId === p.projectId).sort((a,b) => a.ts-b.ts));
+  photoControls(el, p, () => photos.filter(x => !x.hq && x.projectId === p.projectId).sort((a,b) => a.ts-b.ts));
   return el;
 }
 function updateCounts() {
-  const n = sel.size, size = photos.filter(p => sel.has(p.id)).reduce((a, p) => a + p.blob.size, 0);
+  for (const id of sel) if (!photos.some(p => p.id === id && !p.hq)) sel.delete(id);
+  const personal = photos.filter(p => !p.hq);
+  const n = sel.size, size = personal.filter(p => sel.has(p.id)).reduce((a, p) => a + p.blob.size, 0);
   $("selCount").innerHTML = n ? `${n}장 선택<small>${fmtSize(size)}</small>` : `선택 없음`;
   $("badge").hidden = !n; $("badge").textContent = n;
   $("saveBtn").disabled = !n; $("delBtn").disabled = !n;
   const hq = photos.filter(p => p.hq);
   const waiting = hq.filter(p => !p.sent).length;
-  $("uploadBtn").hidden = !standalone || !hq.length;
+  $("uploadBtn").hidden = true;
   $("uploadBadge").hidden = !waiting; $("uploadBadge").textContent = waiting;
-  $("saveBtn").hidden = !!hq.length && !photos.some(p => !p.hq);
-  const allOn = photos.length && photos.every(p => sel.has(p.id));
+  $("saveBtn").hidden = false;
+  const allOn = personal.length && personal.every(p => sel.has(p.id));
   $("selAll").textContent = allOn ? "선택 해제" : "전체 선택";
 }
-$("selAll").onclick = () => { const allOn = photos.every(p => sel.has(p.id)); sel.clear(); if (!allOn) photos.forEach(p => sel.add(p.id)); render(); };
+$("selAll").onclick = () => { const personal = photos.filter(p => !p.hq), allOn = personal.every(p => sel.has(p.id)); sel.clear(); if (!allOn) personal.forEach(p => sel.add(p.id)); render(); };
 $("selToday").onclick = () => { defaultSelect(); render(); };
 $("newProj").onclick = async () => openCamera(await newProject());
 
@@ -818,8 +881,8 @@ $("saveBtn").onclick = async () => {
 };
 
 /* ---------- Delete ---------- */
-$("delBtn").onclick = () => { $("sheetTitle").textContent = `사진 ${sel.size}장을 삭제할까요?`; const n = photos.filter(p => sel.has(p.id) && p.hq && !p.sent).length;
-  $("deleteNote").textContent = "삭제한 사진은 되돌릴 수 없어요. 사진 앱에 이미 저장한 사진은 그대로 남아요." + (n ? ` 본사로 아직 안 보낸 사진 ${n}장 포함` : "");
+$("delBtn").onclick = () => { $("sheetTitle").textContent = `사진 ${sel.size}장을 삭제할까요?`;
+  $("deleteNote").textContent = "삭제한 사진은 되돌릴 수 없어요. 사진 앱에 이미 저장한 사진은 그대로 남아요.";
   $("sheet").hidden = false; };
 $("sheetNo").onclick = () => $("sheet").hidden = true;
 $("sheet").onclick = e => { if (e.target === $("sheet")) $("sheet").hidden = true; };
@@ -851,12 +914,13 @@ function photoControls(el, item, group) {
   el.append(check, preview);
 }
 document.addEventListener("contextmenu", e => { if (e.target.closest(".grid")) e.preventDefault(); });
-let viewing = null, viewURL = null, viewItems = [], viewIndex = 0;
+let viewing = null, viewURL = null, viewItems = [], viewIndex = 0, viewHQ = null;
 let viewScale = 1, viewX = 0, viewY = 0;
 const viewArea = $("vImg").parentElement, viewPointers = new Map();
 function viewTransform() { $("vImg").style.transform = `translate(${viewX}px,${viewY}px) scale(${viewScale})`; }
 function resetView() { viewScale = 1; viewX = viewY = 0; viewTransform(); }
 function openViewer(p, list = [p]) {
+  viewHQ = null; $("vHQActions").hidden = true;
   if (viewURL) URL.revokeObjectURL(viewURL);
   viewItems = list; viewIndex = Math.max(0, list.indexOf(p)); viewing = localOriginal(p) || null;
   viewURL = viewing ? URL.createObjectURL(viewing.blob) : null;
@@ -866,9 +930,22 @@ function openViewer(p, list = [p]) {
   $("vSave").hidden = !viewing; $("vPrev").disabled = viewIndex === 0; $("vNext").disabled = viewIndex === list.length - 1;
   resetView(); $("viewer").hidden = false;
 }
+function openHQViewer(project, item, slot) {
+  openViewer(item);
+  if (item.hq && !item.sent && activeUpload !== item.id) {
+    viewHQ = { project, item, slot };
+    $("vHQActions").hidden = false;
+  }
+}
 function stepView(delta) { const next = viewIndex + delta; if (next >= 0 && next < viewItems.length) openViewer(viewItems[next], viewItems); }
 $("vPrev").onclick = () => stepView(-1); $("vNext").onclick = () => stepView(1);
-$("vClose").onclick = () => { $("viewer").hidden = true; if (viewURL) URL.revokeObjectURL(viewURL); viewURL = null; viewing = null; viewItems = []; viewPointers.clear(); };
+$("vClose").onclick = () => { $("viewer").hidden = true; if (viewURL) URL.revokeObjectURL(viewURL); viewURL = null; viewing = null; viewHQ = null; viewItems = []; viewPointers.clear(); };
+$("vRetake").onclick = () => { const choice = viewHQ; $("vClose").click(); if (choice) chooseHQSlot(choice.project, choice.slot, null, choice.item, "camera"); };
+$("vReplaceAlbum").onclick = () => { const choice = viewHQ; $("vClose").click(); if (choice) chooseHQSlot(choice.project, choice.slot, null, choice.item, "album"); };
+$("vClear").onclick = async () => {
+  const choice = viewHQ; if (!choice || choice.item.sent || activeUpload === choice.item.id) return;
+  $("vClose").click(); await removeHQPhoto(choice.item); render();
+};
 let viewGesture = null, lastTap = null;
 viewArea.oncontextmenu = e => e.preventDefault();
 viewArea.onpointerdown = e => {
@@ -1048,6 +1125,7 @@ if (!standalone) {
   $("installGate").querySelector(".install-card").focus({ preventScroll:true });
 }
 let selectedHQ = null;
+const hqSuccess = new Map();
 let hqProjects = [], statusVersion = 0, camHQ = null, sessionPhotos = [], albumHQ = null;
 let sending = false, retryTimer, retryDelay = 2000, batchDone = 0, batchTotal = 0;
 const storeId = () => storeSel.value === "테스트점" ? testStore?.store_id : hubStores.find(x => x.name === storeSel.value)?.store_id;
@@ -1093,14 +1171,14 @@ async function refreshHQ() {
       else if (remote.state === "open") {
         pausedProjects.delete(String(remote.id));
         for (const p of photos.filter(p => p.hq && same(p.hq.projectId, remote.id) && p.paused)) {
-          delete p.paused; await recordSend(p, "waiting", "프로젝트 재개 · 업로드 대기");
+          delete p.paused; await recordSend(p, "waiting", "프로젝트 재개 · 전송할 수 있어요");
         }
       }
       const local = projects.find(p => same(p.hqProjectId, remote.id));
       if (local && local.name !== remote.name) { local.name = remote.name; await put("projects", local); }
     }
   } catch { if (version === statusVersion) hqProjects = []; }
-  if (version === statusVersion) { render(); updateCamSlot(); cameraBusy(); sendHQ(); }
+  if (version === statusVersion) { render(); updateCamSlot(); cameraBusy(); }
 }
 function localHQ(project) {
   return photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) &&
@@ -1126,11 +1204,17 @@ const cardVisibility = typeof IntersectionObserver === "function" ? new Intersec
 function renderHQ() {
   cardVisibility?.disconnect();
   const root = $("hqCards"), scroll = root.querySelector(".hq-rail")?.scrollLeft || 0;
+  const slotScroll = root.querySelector(".hq-slot-rail")?.scrollLeft || 0;
+  const vaultScroll = root.querySelector(".vault-rail")?.scrollLeft || 0;
   root.textContent = "";
   const visible = hqProjects.filter(p => p.state === "open" || p.state === "paused");
   root.hidden = !standalone || !storeSel.value || !visible.length;
-  if (root.hidden) return;
+  if (root.hidden) { document.body.classList.remove("hq-expanded"); $("dock").hidden = false; $("groups").hidden = false; $("newProj").hidden = false; return; }
   if (!visible.some(p => same(p.id, selectedHQ))) selectedHQ = null;
+  const expanded = selectedHQ !== null;
+  document.body.classList.toggle("hq-expanded", expanded);
+  $("dock").hidden = false; $("groups").hidden = expanded; $("newProj").hidden = expanded;
+  $("toolbar").hidden = expanded || !photos.some(p => !p.hq);
   const rail = document.createElement("div"); rail.className = "hq-rail";
   for (const project of visible) {
     const paused = projectPaused(project.id), active = same(selectedHQ, project.id);
@@ -1163,73 +1247,256 @@ function renderHQ() {
   for (const box of rail.querySelectorAll(".open-glow")) cardVisibility?.observe(box);
   const project = visible.find(p => same(p.id, selectedHQ));
   if (project) {
-    const card = document.createElement("section"); card.id = "hqDetail"; card.className = "hq-card" + (projectPaused(project.id) ? " paused" : "");
-    const title = document.createElement("h2"); title.textContent = project.name; card.appendChild(title);
+    const card = document.createElement("section"); card.id = "hqDetail"; card.className = "hq-card send-area" + (projectPaused(project.id) ? " paused" : "");
+    const head = document.createElement("div"); head.className = "section-head";
+    const title = document.createElement("span"); title.textContent = "본사로 보낼 사진";
+    const count = document.createElement("small");
+    count.textContent = project.preset?.length ? `칸 ${project.preset.filter(slot => !!slotPhoto(project, slot.key)).length}/${project.preset.length} 채움` : `${Number(project.total || 0) + localHQ(project).length}장`;
+    head.append(title, count); card.appendChild(head);
+    const slotRail = document.createElement("div"); slotRail.className = "hq-slot-rail";
     if (project.preset?.length) {
-      const groups = new Map();
-      for (const slot of project.preset) { if (!groups.has(slot.group)) groups.set(slot.group, []); groups.get(slot.group).push(slot); }
-      for (const [name, slots] of groups) {
-        const heading = document.createElement("h3"); heading.textContent = name || "사진"; card.appendChild(heading);
-        const grid = document.createElement("div"); grid.className = "grid";
-        for (const slot of slots) grid.appendChild(hqTile(project, slotPhoto(project, slot.key), slot));
-        card.appendChild(grid);
-      }
+      for (const slot of project.preset) slotRail.appendChild(hqTile(project, slotPhoto(project, slot.key), slot));
     } else {
-      const grid = document.createElement("div"); grid.className = "grid";
       const locals = localHQ(project);
       for (const item of project.items || []) {
-        if (!locals.some(p => same(p.hq.replaceItemId, item.id))) grid.appendChild(hqTile(project, item));
+        if (!locals.some(p => same(p.hq.replaceItemId, item.id))) slotRail.appendChild(hqTile(project, item));
       }
-      for (const p of locals) grid.appendChild(hqTile(project, p));
-      card.appendChild(grid);
-      const shoot = document.createElement("button"); shoot.className = "chip"; shoot.textContent = "찍어서 보내기";
-      shoot.onclick = () => beginHQ(project); card.appendChild(shoot);
-      const album = document.createElement("button"); album.className = "chip"; album.textContent = "앨범에서 골라 보내기";
-      album.onclick = async () => { if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요"); if (await confirmStore()) { albumHQ = { project, storeId: storeId(), storeName: storeSel.value }; $("hqLib").click(); } };
-      card.appendChild(album);
+      for (const p of locals) slotRail.appendChild(hqTile(project, p));
+      const add = document.createElement("button"); add.className = "chip"; add.textContent = "사진 추가";
+      add.onclick = () => chooseHQSlot(project, null, null); slotRail.appendChild(add);
     }
+    card.appendChild(slotRail);
+    const waiting = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.sent);
+    const failed = waiting.some(p => p.sendError);
+    const send = document.createElement("button"); send.type = "button"; send.className = "hq-send" + (failed ? " retry" : "");
+    send.disabled = !waiting.length || projectPaused(project.id) || sending;
+    send.textContent = projectPaused(project.id) ? "잠시 멈춤 — 다시 열리면 전송할 수 있어요" : !waiting.length ? "전송할 사진이 없어요" : sending ? "전송 중…" : failed ? `다시 전송 (${waiting.length}장)` : `전송 (${waiting.length}장)`;
+    send.onclick = () => sendProjectHQ(project); card.appendChild(send);
+    const completed = hqSuccess.get(String(project.id));
+    if (completed && !waiting.length) count.textContent = `전송 완료 ${completed}장`;
     root.appendChild(card);
+    slotRail.scrollLeft = slotScroll;
+    const vault = document.createElement("section"); vault.className = "vault-area";
+    const vaultHead = document.createElement("div"); vaultHead.className = "section-head";
+    const vaultTitle = document.createElement("span"); vaultTitle.textContent = "내 보관함 (아직 안 보냄)";
+    const personal = photos.filter(p => !p.hq).sort((a,b) => b.ts - a.ts);
+    const vaultCount = document.createElement("small"); vaultCount.textContent = `${personal.length}장`;
+    vaultHead.append(vaultTitle, vaultCount); vault.appendChild(vaultHead);
+    const vaultRail = document.createElement("div"); vaultRail.className = "vault-rail";
+    const pages = Math.max(1, Math.ceil(personal.length / 6));
+    for (let page = 0; page < pages; page++) {
+      const panel = document.createElement("div"); panel.className = "vault-page";
+      const items = personal.slice(page * 6, page * 6 + 6);
+      if (!items.length) { const empty = document.createElement("div"); empty.className = "vault-empty"; empty.textContent = "바로 찍은 사진이 여기에 쌓여요"; panel.appendChild(empty); }
+      for (const p of items) { const thumb = thumbEl(p); installVaultDrag(thumb, p); panel.appendChild(thumb); }
+      vaultRail.appendChild(panel);
+    }
+    vault.appendChild(vaultRail);
+    const dots = document.createElement("div"); dots.className = "page-dots"; dots.setAttribute("aria-label", `보관함 ${pages}쪽`);
+    for (let i = 0; i < pages; i++) { const dot = document.createElement("i"); if (!i) dot.className = "active"; dots.appendChild(dot); }
+    vaultRail.onscroll = () => { const page = Math.round(vaultRail.scrollLeft / Math.max(1, vaultRail.clientWidth)); dots.querySelectorAll("i").forEach((dot,i) => dot.classList.toggle("active", i === page)); };
+    vault.appendChild(dots); root.appendChild(vault);
+    vaultRail.scrollLeft = vaultScroll; vaultRail.onscroll();
   }
 }
 function hqTile(project, item, slot) {
-  const el = document.createElement("div"); el.className = "hq-tile"; el.tabIndex = 0; el.setAttribute("role", "button");
+  const cell = document.createElement("div"); cell.className = "hq-cell";
+  cell._hqSlot = slot; cell._hqItem = item; cell._hqProject = project;
+  const el = document.createElement("button"); el.type = "button"; el.className = "hq-tile";
   const local = !!item?.hq, requested = item?.status === "requested";
   if (item) {
     try { el.style.backgroundImage = `url(${JSON.stringify(local ? thumbURL(item) : new URL(item.thumb_url, SERVER).href)})`; } catch {}
     el.classList.toggle("requested", requested); el.classList.toggle("error", !!item.sendError);
   } else { el.classList.add("empty"); el.innerHTML = CAMPLUS; }
   const caption = document.createElement("span"); caption.className = "hq-caption";
-  caption.textContent = [slot?.name, item?.paused ? "대기 중" : item?.sendError ? "못 보냄" : local ? (item.sent ? "전송됨" : "보내는 중") : requested ? `수정요청 · ${item.request_note || "사진을 교체해 주세요"}` : ""].filter(Boolean).join(" · ");
-  el.appendChild(caption); el.setAttribute("aria-label", caption.textContent || "올린 사진");
+  caption.textContent = slot?.name || item?.name || item?.slot || "사진";
+  cell.append(el, caption); el.setAttribute("aria-label", caption.textContent + (requested ? " 수정요청" : item ? " 크게 보기" : " 채우기"));
   el.oncontextmenu = e => e.preventDefault();
-  if (item) {
-    el.removeAttribute("role"); el.removeAttribute("tabindex");
-    photoControls(el, item, () => {
-      if (project.preset?.length) return project.preset.filter(s => s.group === slot?.group).map(s => slotPhoto(project, s.key)).filter(Boolean);
-      const locals = localHQ(project);
-      return [...(project.items || []).filter(i => !locals.some(p => same(p.hq.replaceItemId, i.id))), ...locals];
-    });
-    if (requested) {
-      const replace = document.createElement("button"); replace.type = "button"; replace.className = "hq-caption"; replace.style.pointerEvents = "auto"; replace.textContent = "교체 촬영";
-      replace.onclick = e => { e.stopPropagation(); beginHQ(project, slot, item); }; el.appendChild(replace);
-    }
-    return el;
+  const request = requested ? item : local && item.hq.replaceItemId != null ? (project.items || []).find(i => same(i.id, item.hq.replaceItemId)) : null;
+  if (request && !item?.sent) el.classList.add("requested");
+  if (request?.request_note || requested) {
+    const note = document.createElement("span"); note.className = "hq-note"; note.textContent = `수정요청: ${request?.request_note || "사진을 교체해 주세요"}`; cell.appendChild(note);
+  }
+  if (item && !requested) {
+    const status = document.createElement("span"); status.className = "hq-status";
+    status.textContent = item.paused || projectPaused(project.id) ? "잠시 멈춤" : item.sendError ? "전송 실패" : local && !item.sent ? "보내기 전" : "전송됨";
+    status.classList.toggle("sent", status.textContent === "전송됨"); status.classList.toggle("failed", !!item.sendError);
+    cell.appendChild(status);
   }
   el.onclick = () => {
-    if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
-    if (item?.sendError) return toast(item.sendError);
-    if (local) return toast(item.sent ? "본사 확인 전엔 다시 못 올려요" : "보내는 중이에요");
-    if (item && !requested) return toast("본사 확인 전엔 다시 못 올려요");
-    beginHQ(project, slot, requested ? item : null);
+    if (requested || !item) chooseHQSlot(project, slot, requested ? item : null);
+    else openHQViewer(project, item, slot);
   };
-  el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } };
-  return el;
+  return cell;
+}
+let vaultDrag = null, dragSuppressUntil = 0;
+document.addEventListener("click", e => {
+  if (Date.now() < dragSuppressUntil && e.target.closest(".vault-page .thumb")) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+function dropState(cell) {
+  if (!cell || !cell._hqSlot || projectPaused(cell._hqProject.id)) return "invalid";
+  const item = cell._hqItem;
+  if (!item) return "empty";
+  if (item.hq && !item.sent && activeUpload !== item.id) return "replace";
+  if (item.status === "requested") return "replace";
+  return "invalid";
+}
+function markDrop(cell) {
+  if (vaultDrag?.hover === cell) return;
+  if (vaultDrag?.hover) {
+    vaultDrag.hover.classList.remove("drop-ready", "drop-invalid");
+    vaultDrag.hover.querySelector(".drop-label")?.remove();
+  }
+  if (!vaultDrag) return;
+  vaultDrag.hover = cell;
+  if (!cell) return;
+  const state = dropState(cell), label = document.createElement("span");
+  cell.classList.add(state === "invalid" ? "drop-invalid" : "drop-ready");
+  label.className = "drop-label"; label.textContent = state === "invalid" ? "넣을 수 없어요" : state === "replace" ? "바꾸기" : "여기에 넣기";
+  cell.querySelector(".hq-tile").appendChild(label);
+}
+function updateDragPosition(drag) {
+  drag.ghost.style.left = `${drag.rect.left + drag.x - drag.startX}px`;
+  drag.ghost.style.top = `${drag.rect.top + drag.y - drag.startY}px`;
+  const tile = document.elementFromPoint(drag.x, drag.y)?.closest(".hq-tile");
+  markDrop(tile?.closest(".hq-cell") || null);
+}
+async function movePhotoToSlot(photo, cell) {
+  if (dropState(cell) === "invalid") return;
+  const project = cell._hqProject, slot = cell._hqSlot, old = cell._hqItem;
+  const previous = { hq:photo.hq, sent:photo.sent, store:photo.store, log:photo.log };
+  const oldHQ = old?.hq ? { hq:old.hq, sent:old.sent, store:old.store, log:old.log } : null;
+  try {
+    if (oldHQ) await removeHQPhoto(old);
+    const replacement = old?.status === "requested" ? old : oldHQ && oldHQ.hq.replaceItemId != null ? (project.items || []).find(i => same(i.id, oldHQ.hq.replaceItemId)) : null;
+    photo.hq = { projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot.key,
+      slotName:slot.name, projectName:project.name, replaceItemId:replacement?.id ?? null };
+    photo.store = storeSel.value; photo.sent = false; delete photo.sendError; delete photo.retryable; delete photo.paused;
+    photo.tries = 0; photo.log = [{ at:Date.now(), state:"waiting", msg:"업로드 대기" }];
+    sel.delete(photo.id); await put("photos", photo); hqSuccess.delete(String(project.id)); render();
+  } catch {
+    Object.assign(photo, previous); if (!previous.hq) delete photo.hq;
+    if (oldHQ) { Object.assign(old, oldHQ); await put("photos", old).catch(() => {}); }
+    render(); toast("사진을 칸으로 옮기지 못했어요");
+  }
+}
+function installVaultDrag(el, photo) {
+  el.onpointerdown = e => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (vaultDrag) return;
+    const drag = { id:e.pointerId, source:el, photo, startX:e.clientX, startY:e.clientY, x:e.clientX, y:e.clientY, rect:el.getBoundingClientRect(), active:false, hover:null };
+    vaultDrag = drag;
+    const clean = () => {
+      clearTimeout(drag.timer); clearInterval(drag.edgeTimer);
+      document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", end); document.removeEventListener("pointercancel", cancel);
+      markDrop(null); vaultDrag = null; document.body.classList.remove("dragging-photo"); document.body.style.touchAction = "";
+      el.style.touchAction = ""; document.querySelector(".hq-slot-rail")?.style.removeProperty("scroll-snap-type");
+      if (el.hasPointerCapture?.(drag.id)) el.releasePointerCapture(drag.id);
+    };
+    const returnHome = () => {
+      const ghost = drag.ghost;
+      const to = el.getBoundingClientRect();
+      ghost.style.transition = "left 200ms ease, top 200ms ease, transform 200ms ease, opacity 200ms ease";
+      ghost.style.left = `${to.left}px`; ghost.style.top = `${to.top}px`; ghost.style.transform = "scale(1)"; ghost.style.opacity = "0";
+      setTimeout(() => { ghost.remove(); el.classList.remove("drag-source"); }, 200);
+    };
+    const move = event => {
+      if (event.pointerId !== drag.id) return;
+      drag.x = event.clientX; drag.y = event.clientY;
+      if (!drag.active) {
+        if (Math.hypot(drag.x - drag.startX, drag.y - drag.startY) > 8) { clean(); }
+        return;
+      }
+      event.preventDefault(); updateDragPosition(drag);
+    };
+    const end = event => {
+      if (event.pointerId !== drag.id) return;
+      if (!drag.active) { clean(); return; }
+      drag.x = event.clientX; drag.y = event.clientY; updateDragPosition(drag);
+      const target = drag.hover, valid = target && dropState(target) !== "invalid";
+      dragSuppressUntil = Date.now() + 500; clean();
+      if (valid) { drag.ghost.remove(); el.classList.remove("drag-source"); movePhotoToSlot(photo, target); }
+      else returnHome();
+    };
+    const cancel = event => { if (event.pointerId !== drag.id) return; const active = drag.active; clean(); if (active) { dragSuppressUntil = Date.now() + 500; returnHome(); } };
+    document.addEventListener("pointermove", move, { passive:false });
+    document.addEventListener("pointerup", end); document.addEventListener("pointercancel", cancel);
+    drag.timer = setTimeout(() => {
+      if (vaultDrag !== drag) return;
+      drag.active = true; drag.ghost = document.createElement("img"); drag.ghost.className = "drag-ghost";
+      drag.ghost.src = thumbURL(photo); drag.ghost.alt = "";
+      drag.ghost.style.width = `${drag.rect.width}px`; drag.ghost.style.height = `${drag.rect.height}px`;
+      document.body.appendChild(drag.ghost); el.classList.add("drag-source");
+      document.body.classList.add("dragging-photo"); document.body.style.touchAction = "none"; el.style.touchAction = "none";
+      document.querySelector(".hq-slot-rail")?.style.setProperty("scroll-snap-type", "none");
+      try { el.setPointerCapture(drag.id); } catch {}
+      navigator.vibrate?.(15); updateDragPosition(drag);
+      drag.edgeTimer = setInterval(() => {
+        if (!drag.active) return;
+        const rail = document.querySelector(".hq-slot-rail"), rect = rail?.getBoundingClientRect();
+        if (!rect || drag.y < rect.top || drag.y > rect.bottom) return;
+        const direction = drag.x < rect.left + 40 ? -1 : drag.x > rect.right - 40 ? 1 : 0;
+        if (direction) { rail.scrollLeft += direction * 16; updateDragPosition(drag); }
+      }, 40);
+    }, 350);
+  };
+}
+let hqSlotChoice = null;
+function chooseHQSlot(project, slot, replacement = null, previous = null, mode = null) {
+  if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
+  if (!standalone || storeId() == null) return toast("점포를 먼저 선택해 주세요");
+  hqSlotChoice = { project, slot, replacement, previous };
+  if (mode) { $(mode === "camera" ? "hqSlotCamera" : "hqSlotAlbum").click(); return; }
+  $("hqPickTitle").textContent = slot?.name || "사진 채우기";
+  $("hqPick").hidden = false;
+}
+$("hqPickCamera").onclick = () => { $("hqPick").hidden = true; $("hqSlotCamera").click(); };
+$("hqPickAlbum").onclick = () => { $("hqPick").hidden = true; $("hqSlotAlbum").click(); };
+$("hqPickCancel").onclick = () => { $("hqPick").hidden = true; hqSlotChoice = null; };
+$("hqPick").onclick = e => { if (e.target === $("hqPick")) $("hqPickCancel").click(); };
+async function removeHQPhoto(p) {
+  if (!p?.hq || p.sent || activeUpload === p.id) return;
+  delete p.hq; delete p.sent; delete p.paused; delete p.sendError; delete p.retryable; delete p.log; delete p.tries;
+  await put("photos", p);
+}
+async function receiveHQSlot(event, fromCamera) {
+  const file = event.target.files[0], choice = hqSlotChoice;
+  event.target.value = ""; hqSlotChoice = null;
+  if (!file || !choice || projectPaused(choice.project.id)) return;
+  try {
+    const project = await hqLocalProject(choice.project);
+    const target = { projectId:choice.project.id, storeId:storeId(), storeName:storeSel.value,
+      slot:choice.slot?.key ?? null, replaceItemId:choice.replacement?.id ?? choice.previous?.hq?.replaceItemId ?? null };
+    await photoFromFile(file, project, fromCamera, target);
+    if (choice.previous) await removeHQPhoto(choice.previous);
+    hqSuccess.delete(String(choice.project.id)); render();
+  } catch { toast("이 사진은 처리하지 못했어요"); }
+}
+$("hqSlotCamera").onchange = e => receiveHQSlot(e, true);
+$("hqSlotAlbum").onchange = e => receiveHQSlot(e, false);
+function confirmHQSend(project, count) {
+  $("hqConfirmTitle").innerHTML = `현재 <span class="store-highlight">"${storeSel.value}"</span>으로 지정하셨습니다.`;
+  $("hqConfirmBody").textContent = `이대로 전송할까요? (${count}장)`;
+  $("hqConfirm").hidden = false;
+  return new Promise(resolve => {
+    const finish = ok => { $("hqConfirm").hidden = true; resolve(ok); };
+    $("hqYes").onclick = () => finish(true); $("hqNo").onclick = () => finish(false);
+  });
+}
+async function sendProjectHQ(project) {
+  if (sending || projectPaused(project.id)) return;
+  const list = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.sent);
+  if (!list.length || !(await confirmHQSend(project, list.length))) return;
+  for (const p of list) { delete p.sendError; delete p.retryable; await put("photos", p); }
+  clearTimeout(retryTimer); batchDone = batchTotal = batchSuccess = 0; retryDelay = 2000;
+  hqSuccess.delete(String(project.id)); renderHQ(); sendHQ(project.id);
 }
 function confirmStore() {
   const id = storeId();
   if (!standalone || id == null) return Promise.resolve(false);
   if (ls.get(`hqConfirmed:${id}`) === "yes") return Promise.resolve(true);
-  $("hqConfirmTitle").textContent = `${storeSel.value}으로 보낼까요?`; $("hqConfirm").hidden = false;
+  $("hqConfirmTitle").innerHTML = `현재 <span class="store-highlight">"${storeSel.value}"</span>으로 지정하셨습니다.`;
+  $("hqConfirmBody").textContent = "이대로 전송할까요?"; $("hqConfirm").hidden = false;
   return new Promise(resolve => {
     const finish = ok => { $("hqConfirm").hidden = true; if (ok) ls.set(`hqConfirmed:${id}`, "yes"); resolve(ok); };
     $("hqYes").onclick = () => finish(true); $("hqNo").onclick = () => finish(false);
@@ -1298,7 +1565,7 @@ async function resumeUploads() {
   if (!standalone) return;
   const list = unsentHQ();
   if (!list.length || sending) return;
-  const msg = `앱을 다시 열었어요 — 중지된 업로드 ${list.length}장을 이어서 보냅니다`;
+  const msg = `앱을 다시 열었어요 — 전송 대기 ${list.length}장`;
   uploadProgress(msg, { flow:true });
   for (const p of list) await recordSend(p, "waiting", msg, false);
 }
@@ -1358,41 +1625,34 @@ function renderLog() {
   root.scrollTop = scroll;
 }
 async function retryHQ(list) {
-  if (!standalone) return toast("홈 화면에서 본사 취합을 열어 주세요");
-  clearTimeout(retryTimer);
-  await refreshHQ();
-  for (const p of list) {
-    if (!photos.includes(p) || p.sent || activeUpload === p.id) continue;
-    if (projectPaused(p.hq.projectId) || p.paused) continue;
-    delete p.sendError; delete p.retryable;
-    await recordSend(p, "waiting", "다시 보내기 요청");
-  }
-  render(); sendHQ();
+  const project = hqProjects.find(x => list.some(p => same(p.hq?.projectId, x.id)));
+  if (project) { selectedHQ = project.id; renderHQ(); await sendProjectHQ(project); }
 }
 $("uploadBtn").onclick = () => retryHQ(photos.filter(p => p.hq && !p.sent));
-let successCount = 0, successTimer;
+let successCount = 0, successTimer, batchSuccess = 0;
 function uploadSucceeded(p) {
   const el = $("uploadSuccess"); successCount++;
   el.textContent = successCount > 1 ? `업로드 완료 ${successCount}장` : `업로드 완료 · ${p.hq.storeName} · ${p.hq.slotName || "자유 촬영"}`;
   el.hidden = false; clearTimeout(successTimer);
   successTimer = setTimeout(() => { el.hidden = true; successCount = 0; }, 2600);
 }
-const unsentHQ = () => photos.filter(p => p.hq && !p.sent && (!p.sendError || p.retryable) && !p.paused && !projectPaused(p.hq.projectId));
-function showSendProgress() {
-  $("hqProgress").hidden = !standalone || !unsentHQ().length;
+const unsentHQ = (projectId = null) => photos.filter(p => p.hq && !p.sent && same(p.hq.storeId, storeId()) &&
+  (projectId === null || same(p.hq.projectId, projectId)) && (!p.sendError || p.retryable) && !p.paused && !projectPaused(p.hq.projectId));
+function showSendProgress(projectId) {
+  $("hqProgress").hidden = !standalone || !unsentHQ(projectId).length;
   $("hqProgress").textContent = `본사로 보내는 중 ${batchDone}/${batchTotal}`;
 }
-async function sendHQ() {
+async function sendHQ(projectId) {
   if (!standalone || sending) return;
   clearTimeout(retryTimer); sending = true;
-  if (!batchTotal) { batchDone = 0; batchTotal = unsentHQ().length; }
+  if (!batchTotal) { batchDone = 0; batchTotal = unsentHQ(projectId).length; }
   try {
-    while (unsentHQ().length) {
-      const p = unsentHQ()[0];
+    while (unsentHQ(projectId).length) {
+      const p = unsentHQ(projectId)[0];
       activeUpload = p.id; p.tries = (p.tries || 0) + 1; delete p.sendError; delete p.retryable;
-      batchTotal = Math.max(batchTotal, batchDone + unsentHQ().length);
+      batchTotal = Math.max(batchTotal, batchDone + unsentHQ(projectId).length);
       await recordSend(p, "sending", `${p.hq.storeName || p.store} · ${p.hq.slotName || p.hq.slot || "자유 촬영"} 보내는 중 (${batchDone + 1}/${batchTotal})`); renderHQ();
-      showSendProgress();
+      showSendProgress(projectId);
       const data = new FormData();
       const fields = { store_id:p.hq.storeId, uid:p.id, device_id:deviceId, taken_at:new Date(p.taken).toISOString(), filename:fileName(p) };
       if (p.hq.replaceItemId != null) fields.item_id = p.hq.replaceItemId;
@@ -1412,7 +1672,7 @@ async function sendHQ() {
           activeUpload = null; await recordSend(p, "failed", `✗ 실패: ${p.sendError}`);
         } else if (!r.ok || !result?.ok) throw Error(result?.error || `서버 응답 오류 (${r.status})`);
         else {
-          p.sent = true; delete p.paused; delete p.sendError; activeUpload = null;
+          p.sent = true; batchSuccess++; delete p.paused; delete p.sendError; activeUpload = null;
           await recordSend(p, "complete", `✓ 업로드 완료 (${batchDone + 1}/${batchTotal})`); uploadSucceeded(p);
         }
         if (photos.includes(p)) await put("photos", p);
@@ -1421,16 +1681,16 @@ async function sendHQ() {
         activeUpload = null;
         p.sendError = error?.name === "AbortError" ? "응답 시간 초과 · 자동 재시도 대기" : error?.message || "연결 실패 · 자동 재시도 대기";
         p.retryable = true; await recordSend(p, "failed", `✗ 실패: ${p.sendError} — ${retryDelay / 1000}초 뒤 다시 시도`); render();
-        retryTimer = setTimeout(sendHQ, retryDelay); retryDelay = Math.min(60000, retryDelay * 2); return;
+        retryTimer = setTimeout(() => sendHQ(projectId), retryDelay); retryDelay = Math.min(60000, retryDelay * 2); return;
       }
     }
-    if (batchTotal && batchDone && !photos.some(p => p.hq && (p.sendError || p.paused))) toast("모두 보냈어요");
-    if (batchTotal && batchDone && !photos.some(p => p.hq && !p.sent)) uploadProgress(`모두 끝났어요 (${batchDone}/${batchTotal})`, { flow:true, finished:true });
-    else if (batchTotal && !photos.some(p => p.hq && !p.sent && (p.paused || p.retryable || projectPaused(p.hq.projectId)))) stripTimer = setTimeout(() => { $("uploadStrip").hidden = true; }, 5000);
-    batchDone = batchTotal = 0; showSendProgress();
-  } finally { activeUpload = null; sending = false; renderLog(); updateCounts(); applyAppUpdate(); }
+    if (batchSuccess) hqSuccess.set(String(projectId), batchSuccess);
+    if (batchSuccess && !photos.some(p => p.hq && same(p.hq.projectId, projectId) && !p.sent)) uploadProgress(`전송 완료 ${batchSuccess}장`, { flow:true, finished:true });
+    else if (batchTotal) stripTimer = setTimeout(() => { $("uploadStrip").hidden = true; }, 5000);
+    batchDone = batchTotal = batchSuccess = 0; showSendProgress(projectId); renderHQ();
+  } finally { activeUpload = null; sending = false; renderHQ(); renderLog(); updateCounts(); applyAppUpdate(); }
 }
-window.addEventListener("online", () => { sendHQ(); refreshHQ(); });
+window.addEventListener("online", () => { refreshHQ(); });
 document.addEventListener("visibilitychange", async () => {
   if (!document.hidden) { await resumeUploads(); refreshHQ(); checkAppVersion(); }
   else for (const box of $("hqCards").querySelectorAll(".in-view")) box.classList.remove("in-view");
@@ -1476,7 +1736,7 @@ setInterval(() => { refreshHQ(); checkAppVersion(); }, 60000);
   } catch { toast("사진 보관함을 열 수 없어요. 개인정보 보호 모드를 꺼 주세요."); }
   defaultSelect(); render();
   await resumeUploads();
-  checkAppVersion(); refreshHQ(); loadStores(); sendHQ();
+  checkAppVersion(); refreshHQ(); loadStores();
 })();
 </script>
 </body>
