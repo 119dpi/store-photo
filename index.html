@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>매장 사진 촬영기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one narrow phone column — store pick, big capture button, then result cards stacked newest first */
+:root {
+  --bg: #f6f4f8;
+  --surface: #ffffff;
+  --fg: #1d1a22;
+  --muted: #6b6475;
+  --line: #e4dfea;
+  --accent: #b5309a;
+  --accent-2: #7a1f5c;
+  --good: #1f7a4d;
+  --good-bg: #e5f4ec;
+  --warn: #9a5b00;
+  --font-ui: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #151218; --surface: #211c26; --fg: #f1edf5; --muted: #a59cb0; --line: #352e3c;
+  --accent: #e15ec6; --accent-2: #a8327f; --good: #6fd3a0; --good-bg: #183026; --warn: #f0b45a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #151218; --surface: #211c26; --fg: #f1edf5; --muted: #a59cb0; --line: #352e3c;
+  --accent: #e15ec6; --accent-2: #a8327f; --good: #6fd3a0; --good-bg: #183026; --warn: #f0b45a; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 520px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px; }
+h1 { font-size: 24px; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.04em; }
+select { font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--fg); width: 100%; }
+
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--line); padding: 4px; border-radius: 12px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { text-align: center; padding: 9px 6px; border-radius: 9px; cursor: pointer; font-size: 14px; color: var(--muted); }
+.seg label b { display: block; font-size: 15px; color: var(--fg); }
+.seg input:checked + label { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); }
+
+.capture { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 22px; border-radius: 18px;
+  background: linear-gradient(100deg, var(--accent), var(--accent-2)); color: #fff; font-size: 19px; font-weight: 700;
+  cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+.capture:active { transform: scale(.98); }
+.capture svg { width: 26px; height: 26px; }
+.alt { text-align: center; font-size: 14px; color: var(--accent); cursor: pointer; padding: 4px; }
+input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+input[type=file]:focus-visible + .capture { outline: 3px solid var(--fg); outline-offset: 2px; }
+
+.list { display: flex; flex-direction: column; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.card img { display: block; width: 100%; height: auto; background: var(--line); -webkit-touch-callout: default; }
+.meta { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.name { font-size: 13px; color: var(--muted); word-break: break-all; min-width: 0; }
+.sizes { font-family: var(--font-num); font-size: 13px; font-variant-numeric: tabular-nums; }
+.sizes s { color: var(--muted); }
+.pill { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 99px; background: var(--good-bg); color: var(--good); }
+.pill.ex { background: var(--line); color: var(--muted); }
+.btn { font: inherit; font-size: 16px; font-weight: 600; padding: 12px; border-radius: 12px; border: 0; cursor: pointer;
+  background: var(--fg); color: var(--bg); width: 100%; }
+.btn:disabled { opacity: .5; }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.msg { font-size: 13px; margin: 0; }
+.msg.ok { color: var(--good); } .msg.err { color: var(--warn); }
+.busy { padding: 28px; text-align: center; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>매장 사진 촬영기</h1>
+    <p class="sub">찍으면 오른쪽 아래에 촬영 날짜가 들어가고, 용량을 줄인 JPG로 저장돼요.</p>
+  </header>
+
+  <div class="field">
+    <label class="label" for="store">점포 (파일 이름에 들어가요)</label>
+    <select id="store"><option value="">점포 선택 안 함</option></select>
+  </div>
+
+  <div class="field">
+    <span class="label">화질</span>
+    <div class="seg" role="radiogroup">
+      <input type="radio" name="q" id="q1" value="1920" checked><label for="q1"><b>표준</b>1920px · 약 0.4MB</label>
+      <input type="radio" name="q" id="q2" value="2560"><label for="q2"><b>고화질</b>2560px · 약 0.8MB</label>
+    </div>
+  </div>
+
+  <div>
+    <input type="file" id="cam" accept="image/*" capture="environment">
+    <label for="cam" class="capture">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      카메라로 촬영
+    </label>
+    <input type="file" id="lib" accept="image/*" multiple>
+    <label for="lib" class="alt" style="display:block;margin-top:8px">앨범에서 사진 고르기</label>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<script>
+const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
+"김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
+"김정훈 권역":["EM가든5점","EM경기광주점","EM구로점","EM남양주점","EM다산점","EM명일점","EM목동점","EM별내점","EM여주점","EM용산점","EM이천점","EM자양점","EM창동점","EM청계천점","EM춘천점","EM하남점"],
+"김종권 권역":["EM광산점","EM구미점","EM금정점","EM마산점","EM문현점","EM봉선점","EM사상점","EM서귀포점","EM성서점","EM순천점","EM양산점","EM여수점","EM연제점","EM울산점","EM칠성점","EM통영점","EM포항점"]};
+
+const $ = s => document.querySelector(s);
+const storeSel = $("#store"), list = $("#list");
+for (const [g, names] of Object.entries(STORES)) {
+  const og = document.createElement("optgroup"); og.label = g;
+  for (const n of names) { const o = document.createElement("option"); o.value = o.textContent = n; og.appendChild(o); }
+  storeSel.appendChild(og);
+}
+const ls = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+storeSel.value = ls.get("store") || "";
+storeSel.onchange = () => ls.set("store", storeSel.value);
+const savedQ = ls.get("q"); if (savedQ) { const r = document.querySelector(`input[name=q][value="${savedQ}"]`); if (r) r.checked = true; }
+document.querySelectorAll("input[name=q]").forEach(r => r.onchange = () => ls.set("q", r.value));
+
+let downloads = null;
+(async () => { try { downloads = await window.claude?.use?.("downloads"); } catch {} refreshSaveButtons(); })();
+
+const pad = n => String(n).padStart(2, "0");
+const fmtSize = b => b >= 1048576 ? (b/1048576).toFixed(1) + "MB" : Math.round(b/1024) + "KB";
+
+// Read EXIF DateTimeOriginal from a JPEG, if present
+async function exifDate(file) {
+  try {
+    const buf = new DataView(await file.slice(0, 131072).arrayBuffer());
+    if (buf.getUint16(0) !== 0xFFD8) return null;
+    let p = 2;
+    while (p < buf.byteLength - 4) {
+      const m = buf.getUint16(p), len = buf.getUint16(p + 2);
+      if (m === 0xFFE1 && buf.getUint32(p + 4) === 0x45786966) {
+        const t = p + 10, le = buf.getUint16(t) === 0x4949;
+        const u16 = o => buf.getUint16(t + o, le), u32 = o => buf.getUint32(t + o, le);
+        const findTag = (ifd, tag) => { const n = u16(ifd); for (let i = 0; i < n; i++) { const e = ifd + 2 + i*12; if (u16(e) === tag) return e; } return null; };
+        const ifd0 = u32(4);
+        const ex = findTag(ifd0, 0x8769); if (ex == null) return null;
+        const exif = u32(ex + 8);
+        const d = findTag(exif, 0x9003) ?? findTag(exif, 0x9004); if (d == null) return null;
+        const off = u32(d + 8); let s = "";
+        for (let i = 0; i < 19; i++) s += String.fromCharCode(buf.getUint8(t + off + i));
+        const mm = s.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+        return mm ? new Date(+mm[1], mm[2]-1, +mm[3], +mm[4], +mm[5], +mm[6]) : null;
+      }
+      if ((m & 0xFF00) !== 0xFF00) return null;
+      p += 2 + len;
+    }
+  } catch {}
+  return null;
+}
+
+function loadImage(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => res({ img, url }); img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("이미지를 열 수 없어요")); };
+    img.src = url;
+  });
+}
+
+// Resize, stamp date bottom-right, encode JPEG
+async function process(file, maxEdge) {
+  const taken = (await exifDate(file)) || new Date(file.lastModified || Date.now());
+  const { img, url } = await loadImage(file);
+  const w0 = img.naturalWidth, h0 = img.naturalHeight;
+  const s = Math.min(1, maxEdge / Math.max(w0, h0));
+  const w = Math.round(w0 * s), h = Math.round(h0 * s);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  g.imageSmoothingQuality = "high";
+  g.drawImage(img, 0, 0, w, h);
+  URL.revokeObjectURL(url);
+
+  const label = `${taken.getFullYear()}.${pad(taken.getMonth()+1)}.${pad(taken.getDate())}`;
+  const fs = Math.round(Math.max(w, h) * 0.022), m = Math.round(fs * 0.8);
+  g.font = `600 ${fs}px -apple-system, "Helvetica Neue", Arial, sans-serif`;
+  g.textAlign = "right"; g.textBaseline = "bottom";
+  g.shadowColor = "rgba(0,0,0,.75)"; g.shadowBlur = fs * 0.25; g.shadowOffsetX = 0; g.shadowOffsetY = fs * 0.05;
+  g.fillStyle = "#ffb43a";
+  g.fillText(label, w - m, h - m);
+
+  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", maxEdge >= 2560 ? 0.85 : 0.82));
+  const store = storeSel.value;
+  const stamp = `${taken.getFullYear()}${pad(taken.getMonth()+1)}${pad(taken.getDate())}_${pad(taken.getHours())}${pad(taken.getMinutes())}${pad(taken.getSeconds())}`;
+  const filename = (store ? store + "_" : "매장사진_") + stamp + ".jpg";
+  return { blob, filename, before: file.size, w, h };
+}
+
+function card({ src, filename, before, after, w, h, example }) {
+  const el = document.createElement("article"); el.className = "card";
+  const pct = before ? Math.round((1 - after / before) * 100) : 0;
+  el.innerHTML = `<img alt="">
+    <div class="meta">
+      <div class="row"><span class="name"></span>${example ? '<span class="pill ex">예시</span>' : `<span class="pill">${pct}% 줄임</span>`}</div>
+      <div class="row sizes"><span>${before ? `<s>${fmtSize(before)}</s> → ` : ""}<b>${fmtSize(after)}</b></span><span>${w}×${h}</span></div>
+      ${example ? '<p class="hint">촬영하면 이런 카드가 생기고, 사진 저장 버튼으로 JPG를 받을 수 있어요.</p>'
+        : '<button class="btn save" type="button">사진 저장</button><p class="msg" hidden></p><p class="hint">저장 버튼이 안 되면 사진을 길게 눌러 \'사진 앱에 저장\'을 고르세요.</p>'}
+    </div>`;
+  el.querySelector("img").src = src;
+  el.querySelector(".name").textContent = filename;
+  return el;
+}
+
+// Save path: Claude viewer capability → iOS share sheet (사진 앱에 저장) → plain download
+function canSave() {
+  if (downloads) return true;
+  try { if (navigator.canShare && navigator.canShare({ files: [new File([""], "a.jpg", { type: "image/jpeg" })] })) return true; } catch {}
+  return window.top === window.self;
+}
+async function saveFile(blob, filename) {
+  if (downloads) return downloads.save({ filename, data: blob });
+  const file = new File([blob], filename, { type: "image/jpeg" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file] });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function refreshSaveButtons() {
+  document.querySelectorAll(".save").forEach(b => b.hidden = !canSave());
+}
+
+async function handle(files) {
+  const maxEdge = +document.querySelector("input[name=q]:checked").value;
+  document.getElementById("example")?.remove();
+  for (const file of files) {
+    const busy = document.createElement("div"); busy.className = "card busy"; busy.textContent = "사진 줄이는 중…";
+    list.prepend(busy);
+    try {
+      const r = await process(file, maxEdge);
+      const el = card({ src: URL.createObjectURL(r.blob), filename: r.filename, before: r.before, after: r.blob.size, w: r.w, h: r.h });
+      const btn = el.querySelector(".save"), msg = el.querySelector(".msg");
+      btn.hidden = !canSave();
+      btn.onclick = async () => {
+        btn.disabled = true; msg.hidden = true;
+        try {
+          await saveFile(r.blob, r.filename);
+          if (downloads) { msg.className = "msg ok"; msg.textContent = "저장했어요."; msg.hidden = false; }
+        } catch (e) {
+          if (e?.code !== "declined" && e?.name !== "AbortError") { msg.className = "msg err"; msg.textContent = "저장하지 못했어요. 사진을 길게 눌러 저장해 주세요."; msg.hidden = false; }
+        }
+        btn.disabled = false;
+      };
+      busy.replaceWith(el);
+    } catch (e) {
+      busy.textContent = "이 사진은 처리하지 못했어요. 다시 찍어 주세요.";
+    }
+  }
+}
+$("#cam").onchange = e => { handle([...e.target.files]); e.target.value = ""; };
+$("#lib").onchange = e => { handle([...e.target.files]); e.target.value = ""; };
+
+// Example card so the first view shows the result
+(function example() {
+  const w = 960, h = 720, c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  const sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, "#d9d4de"); sky.addColorStop(1, "#8f8796");
+  g.fillStyle = sky; g.fillRect(0, 0, w, h);
+  g.fillStyle = "#f4f2f6"; g.fillRect(140, 300, 680, 300);
+  g.fillStyle = "#b5309a"; g.fillRect(140, 250, 680, 70);
+  g.fillStyle = "#fff"; g.font = "700 38px -apple-system, sans-serif"; g.textAlign = "center"; g.fillText("STORE", 480, 298);
+  g.fillStyle = "#c9c3cf"; for (let i = 0; i < 4; i++) g.fillRect(180 + i*160, 380, 120, 160);
+  const d = new Date(), label = `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;
+  const fs = Math.round(w * 0.022 * 1.4), m = Math.round(fs * 0.8);
+  g.font = `600 ${fs}px -apple-system, sans-serif`; g.textAlign = "right"; g.textBaseline = "bottom";
+  g.shadowColor = "rgba(0,0,0,.75)"; g.shadowBlur = fs*.25; g.fillStyle = "#ffb43a"; g.fillText(label, w - m, h - m);
+  const el = card({ src: c.toDataURL("image/jpeg", .8), filename: "EM세종점_20261028_103012.jpg", before: 0, after: 412000, w: 1920, h: 1440, example: true });
+  el.id = "example"; list.appendChild(el);
+})();
+</script>
+
+</body>
+</html>
