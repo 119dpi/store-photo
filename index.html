@@ -329,9 +329,9 @@ body.dragging-photo, body.dragging-photo * { user-select:none !important; -webki
 /* Headquarters overview follows the 390 × 844 mockup. */
 body.hq-expanded .main { height:calc(100dvh - var(--st) - 54px); padding:4px var(--gutter-r) calc(var(--dock-h) + 12px) var(--gutter); display:flex; flex-direction:column; gap:12px; }
 body.hq-expanded #hqCards { height:100%; display:grid; grid-template-rows:auto minmax(0, 1fr); gap:12px; }
-body.hq-expanded .hq-rail { flex:none; min-height:0; align-items:flex-start; padding:1px 0; gap:12px; overflow-y:hidden; scrollbar-width:none; transition:height .2s ease; }
+body.hq-expanded .hq-rail { position:relative; z-index:1; flex:none; min-height:0; align-items:flex-start; padding:1px 0; gap:12px; overflow-y:hidden; scrollbar-width:none; }
+body.hq-expanded #hqCards > :nth-child(2) { position:relative; z-index:0; }
 body.hq-expanded .hq-rail::-webkit-scrollbar { display:none; }
-@media (prefers-reduced-motion:reduce) { body.hq-expanded .hq-rail { transition:none; } }
 body.hq-expanded .hq-summary { flex:0 0 100%; display:flex; flex-direction:column; gap:0; padding:14px; border-radius:20px; background:#1b1712; }
 body.hq-expanded .hq-summary:only-child { flex-basis:100%; }
 body.hq-expanded .hq-summary .hq-card-title .hq-meta { display:block; }
@@ -611,7 +611,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.9"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.10"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -676,11 +676,22 @@ function openDB() {
   });
 }
 function tx(store, mode, fn) {
-  return new Promise((res, rej) => {
-    const t = db.transaction(store, mode), s = t.objectStore(store); let out;
-    Promise.resolve(fn(s)).then(v => out = v);
+  let transaction, timer;
+  const pending = new Promise((res, rej) => {
+    const t = transaction = db.transaction(store, mode), s = t.objectStore(store); let out;
+    Promise.resolve(fn(s)).then(v => out = v, rej);
     t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
   });
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(Error("저장소 응답 없음"));
+      try { transaction?.abort(); } catch {}
+    }, 10000);
+  });
+  return Promise.race([pending, timeout]).catch(error => {
+    uploadProgress(error?.message || "저장소 처리 실패", { flow:true });
+    throw error;
+  }).finally(() => clearTimeout(timer));
 }
 const all = store => tx(store, "readonly", s => new Promise(r => { const q = s.getAll(); q.onsuccess = () => r(q.result); }));
 const put = (store, v) => tx(store, "readwrite", s => { s.put(v); });
@@ -1285,16 +1296,28 @@ const storeId = () => storeSel.value === "테스트점" ? testStore?.store_id : 
 const same = (a, b) => String(a) === String(b);
 const pausedProjects = new Set();
 const projectPaused = id => pausedProjects.has(String(id));
-async function pauseProject(id) {
+async function pauseProject(id, current = () => true) {
   pausedProjects.add(String(id));
   for (const p of photos.filter(p => p.hq && same(p.hq.projectId, id) && !p.sent && !p.sendError && !p.paused)) {
+    if (!current()) return;
     p.paused = true; delete p.sendError; await recordSend(p, "paused", "관리자가 프로젝트를 잠시 멈췄어요 — 다시 열리면 이어서 보냅니다");
   }
 }
 async function hubFetch(path, options) {
-  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
-  try { return await fetch(SERVER + path, { ...options, signal: controller.signal }); }
-  finally { clearTimeout(timer); }
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new DOMException("응답 시간 초과", "AbortError")); controller.abort();
+    }, 20000);
+  });
+  try {
+    const response = await Promise.race([fetch(SERVER + path, { ...options, signal:controller.signal }), timeout]);
+    if (!response.ok && options?.method === "POST") sendNotice(`서버 응답 오류 ${response.status}`);
+    // Read the body under the same deadline, even if headers arrived immediately.
+    const body = await Promise.race([response.text(), timeout]);
+    return { ok:response.ok, status:response.status, json:async () => JSON.parse(body) };
+  } finally { clearTimeout(timer); }
 }
 async function loadStores() {
   try {
@@ -1386,10 +1409,10 @@ function fitHQRail() {
 const hqCardSize = typeof ResizeObserver === "function" ? new ResizeObserver(fitHQRail) : null;
 window.addEventListener("resize", fitHQRail);
 function renderHQ() {
+  retrySentSaves();
   cardVisibility?.disconnect();
   hqCardSize?.disconnect();
   const root = $("hqCards"), scroll = root.querySelector(".hq-rail")?.scrollLeft || 0;
-  const previousRailHeight = document.body.classList.contains("hq-expanded") ? root.querySelector(".hq-rail")?.getBoundingClientRect().height : 0;
   const slotScroll = root.querySelector(".hq-summary.active .hq-slot-rail")?.scrollLeft || 0;
   const vaultScroll = root.querySelector(".vault-rail")?.scrollLeft || 0;
   root.textContent = "";
@@ -1413,7 +1436,7 @@ function renderHQ() {
     const paused = projectPaused(project.id), active = same(selectedHQ, project.id);
     const slots = activeHQSlots(project);
     const filled = slots.filter(slot => !!slotPhoto(project, slot.key)).length;
-    const waiting = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.broken && !p.sent);
+    const waiting = sendableHQ(project.id);
     const box = document.createElement("section");
     box.className = "hq-summary" + (active ? " active" : "") + (paused ? " paused-glow" : " open-glow");
     if (!paused) {
@@ -1466,9 +1489,9 @@ function renderHQ() {
       box.appendChild(dots);
       const failed = waiting.some(p => p.sendError);
       const send = document.createElement("button"); send.type = "button"; send.className = "hq-send" + (failed ? " retry" : "");
-      send.disabled = !waiting.length || paused || sending;
+      send.disabled = !waiting.length || paused;
       send.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V4m0 0-4 4m4-4 4 4M5 20h14"/></svg><span></span>';
-      send.querySelector("span").textContent = paused ? "잠시 멈춤 — 다시 열리면 전송할 수 있어요" : !waiting.length ? "전송할 사진이 없어요" : sending ? "전송 중…" : failed ? "다시 전송 (" + waiting.length + "장)" : "전송 (" + waiting.length + "장)";
+      send.querySelector("span").textContent = paused ? "잠시 멈춤 — 다시 열리면 전송할 수 있어요" : !waiting.length ? "전송할 사진이 없어요" : sending ? `전송 중… ${batchDone}/${batchTotal}` : failed ? "다시 전송 (" + waiting.length + "장)" : "전송 (" + waiting.length + "장)";
       send.onclick = () => sendProjectHQ(project); box.appendChild(send);
       const completed = hqSuccess.get(String(project.id));
       if (completed && !waiting.length) count.textContent = "전송 완료 " + completed + "장";
@@ -1481,10 +1504,6 @@ function renderHQ() {
   }
   root.appendChild(rail);
   if (expanded) {
-    if (previousRailHeight) {
-      rail.style.height = previousRailHeight + "px";
-      rail.getBoundingClientRect(); // Start the transition at the previous visible height after a redraw.
-    }
     fitHQRail();
     const activeCard = rail.querySelector(".hq-summary.active");
     if (activeCard) hqCardSize?.observe(activeCard);
@@ -1734,14 +1753,22 @@ function confirmHQSend(project, count) {
     $("hqYes").onclick = () => finish(true); $("hqNo").onclick = () => finish(false);
   });
 }
-async function sendProjectHQ(project) {
-  if (sending || projectPaused(project.id)) return;
-  const list = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.broken && !p.sent && !missingHQ(p));
-  if (!list.length) return toast("보낼 사진이 없어요");
-  if (!(await confirmHQSend(project, list.length))) return;
-  for (const p of list) { delete p.sendError; delete p.retryable; await put("photos", p); }
+const sendableHQ = projectId => photos.filter(p => p.hq && same(p.hq.projectId, projectId) && same(p.hq.storeId, storeId()) && !p.broken && !p.sent && !missingHQ(p));
+function sendNotice(msg) { uploadProgress(msg, { flow:true }); toast(msg); }
+const sendingNotice = () => `보내는 중이에요 (${batchDone}/${batchTotal}장)`;
+async function sendProjectHQ(project, reason = "버튼") {
+  const list = sendableHQ(project.id);
+  uploadProgress(`전송 버튼 누름 · 대기 ${list.length}장 · sending=${sending ? "예" : "아니오"}`, { flow:true });
+  if (sending) return sendNotice(sendingNotice());
+  if (projectPaused(project.id)) return sendNotice("잠시 멈춤 중이에요");
+  if (!list.length) return sendNotice("보낼 사진이 없어요");
+  if (!(await confirmHQSend(project, list.length))) return uploadProgress("전송 취소", { flow:true });
+  if (sending) return sendNotice(sendingNotice());
+  if (projectPaused(project.id)) return sendNotice("잠시 멈춤 중이에요");
+  // Persist retry flags inside the guarded upload round, rather than before it.
+  for (const p of list) { delete p.sendError; delete p.retryable; }
   clearTimeout(retryTimer); batchDone = batchTotal = batchSuccess = 0; retryDelay = 2000;
-  hqSuccess.delete(String(project.id)); renderHQ(); sendHQ(project.id);
+  hqSuccess.delete(String(project.id)); renderHQ(); await sendHQ(project.id, reason);
 }
 function confirmStore() {
   const id = storeId();
@@ -1807,17 +1834,19 @@ let stripTimer;
 let flowLog = [];
 try { const saved = JSON.parse(ls.get("hqFlowLog") || "[]"); if (Array.isArray(saved)) flowLog = saved.filter(x => x && typeof x.msg === "string" && Number.isFinite(x.at)).slice(-30); } catch {}
 function uploadProgress(msg, { flow = false, finished = false } = {}) {
-  if (!standalone) return;
+  if (!standalone && !flow) return;
   clearTimeout(stripTimer);
   $("uploadStripText").textContent = msg; $("uploadStrip").hidden = false;
   if (flow) { flowLog = [...flowLog, { at:Date.now(), msg }].slice(-30); ls.set("hqFlowLog", JSON.stringify(flowLog)); renderLog(); }
   stripTimer = setTimeout(() => { $("uploadStrip").hidden = true; }, 4000);
 }
 async function resumeUploads() {
-  if (!standalone || statusStore === null || !same(statusStore, storeId())) return;
+  if (!standalone) return uploadProgress("전송 재개 대기 · 홈 화면 앱이 아니에요", { flow:true });
+  if (statusStore === null || !same(statusStore, storeId())) return uploadProgress("전송 재개 대기 · 가게 상태를 아직 받지 못했어요", { flow:true });
   notifyMissingHQ();
   const list = unsentHQ();
-  if (!list.length || sending) return;
+  if (!list.length) return uploadProgress("전송 재개 대기 · 보낼 사진이 없어요", { flow:true });
+  if (sending) return uploadProgress(sendingNotice(), { flow:true });
   const msg = `앱을 다시 열었어요 — 전송 대기 ${list.length}장`;
   if (!photos.some(missingHQ) && Date.now() >= slotMoveNoticeUntil) uploadProgress(msg, { flow:true });
   for (const p of list) await recordSend(p, "waiting", msg, false);
@@ -1831,8 +1860,24 @@ async function recordSend(p, state, msg, show = true) {
   if (show) uploadProgress(msg);
   p.tries ||= 0;
   p.log = [...(p.log || []), { at:Date.now(), state, msg }].slice(-10);
-  if (photos.includes(p)) await put("photos", p);
+  if (photos.includes(p)) {
+    try { await put("photos", p); }
+    catch { uploadProgress("진행 기록 저장 실패 · 전송은 계속", { flow:true }); }
+  }
   renderLog(); updateCounts();
+}
+const pendingSentSaves = new Set(), savingSent = new Set();
+async function saveSent(p) {
+  if (savingSent.has(p)) return;
+  if (!photos.includes(p) || !p.sent) { pendingSentSaves.delete(p); return; }
+  savingSent.add(p);
+  try { await put("photos", p); pendingSentSaves.delete(p); }
+  catch {
+    uploadProgress("전송 완료 · 폰 저장은 실패(다시 열면 한 번 더 보낼 수 있으나 서버가 중복을 막음)", { flow:true });
+  } finally { savingSent.delete(p); }
+}
+function retrySentSaves() {
+  for (const p of pendingSentSaves) void saveSent(p);
 }
 function openLog(projectId = null) {
   logProject = projectId; logFilter = "all";
@@ -1899,8 +1944,8 @@ function renderLog() {
 }
 async function retryHQ(list) {
   const project = hqProjects.find(x => list.some(p => p.hq && !p.sent && same(p.hq.storeId, storeId()) && !missingHQ(p) && same(p.hq.projectId, x.id)));
-  if (project) { selectedHQ = project.id; renderHQ(); await sendProjectHQ(project); }
-  else toast("보낼 사진이 없어요");
+  if (project) { selectedHQ = project.id; renderHQ(); await sendProjectHQ(project, "다시 보내기"); }
+  else uploadProgress("다시 보내기 · 보낼 사진이 없어요", { flow:true });
 }
 $("uploadBtn").onclick = () => retryHQ(photos.filter(p => p.hq && !p.sent));
 let successCount = 0, successTimer, batchSuccess = 0;
@@ -1916,53 +1961,117 @@ function showSendProgress(projectId) {
   $("hqProgress").hidden = !standalone || !unsentHQ(projectId).length;
   $("hqProgress").textContent = `본사로 보내는 중 ${batchDone}/${batchTotal}`;
 }
-async function sendHQ(projectId) {
-  if (!standalone || sending) return;
-  clearTimeout(retryTimer); sending = true;
+let uploadRun = 0, uploadRound = 0;
+async function sendHQ(projectId, reason) {
+  if (!standalone) return sendNotice("홈 화면 앱에서만 보낼 수 있어요");
+  if (sending) return sendNotice(sendingNotice());
+  clearTimeout(retryTimer);
   if (!batchTotal) { batchDone = 0; batchTotal = unsentHQ(projectId).length; }
+  sending = true;
+  renderHQ();
+  uploadProgress(`전송 시작 · 이유=${reason} · 대기 ${unsentHQ(projectId).length}장`, { flow:true });
+  const run = ++uploadRun;
+  let endReason = "완료";
+  const retry = () => {
+    retryTimer = setTimeout(() => sendHQ(projectId, "자동 재시도"), retryDelay);
+    retryDelay = Math.min(60000, retryDelay * 2);
+  };
   try {
     while (unsentHQ(projectId).length) {
-      const p = unsentHQ(projectId)[0];
-      activeUpload = p.id; p.tries = (p.tries || 0) + 1; delete p.sendError; delete p.retryable;
-      batchTotal = Math.max(batchTotal, batchDone + unsentHQ(projectId).length);
-      await recordSend(p, "sending", `${p.hq.storeName || p.store} · ${p.hq.slotName || p.hq.slot || "자유 촬영"} 보내는 중 (${batchDone + 1}/${batchTotal})`); renderHQ();
-      showSendProgress(projectId);
-      const data = new FormData();
-      const fields = { store_id:p.hq.storeId, uid:p.id, device_id:deviceId, taken_at:new Date(p.taken).toISOString(), filename:fileName(p) };
-      if (p.hq.replaceItemId != null) fields.item_id = p.hq.replaceItemId;
-      else { fields.project_id = p.hq.projectId; if (p.hq.slot != null) fields.slot = p.hq.slot; }
-      for (const [key,value] of Object.entries(fields)) data.append(key, value);
-      data.append("photo", p.blob, fileName(p)); data.append("thumb", p.thumb, "thumb.jpg");
-      try {
-        const r = await hubFetch(`/api/store-photo/${p.hq.replaceItemId != null ? "replace" : "upload"}`, { method:"POST", body:data });
-        let result; try { result = await r.json(); } catch {}
-        if (r.status === 423) {
-          activeUpload = null; delete p.sendError;
-          await pauseProject(p.hq.projectId);
-          render(); cameraBusy(); continue;
+      retrySentSaves();
+      const p = unsentHQ(projectId)[0], round = ++uploadRound;
+      const current = () => run === uploadRun && round === uploadRound;
+      let watchdog;
+      const work = async () => {
+        activeUpload = p.id; p.tries = (p.tries || 0) + 1; delete p.sendError; delete p.retryable;
+        batchTotal = Math.max(batchTotal, batchDone + unsentHQ(projectId).length);
+        try {
+          await recordSend(p, "sending", `${p.hq.storeName || p.store} · ${p.hq.slotName || p.hq.slot || "자유 촬영"} 보내는 중 (${batchDone + 1}/${batchTotal})`);
+          if (!current()) return;
+          renderHQ(); showSendProgress(projectId);
+          const data = new FormData();
+          const fields = { store_id:p.hq.storeId, uid:p.id, device_id:deviceId, taken_at:new Date(p.taken).toISOString(), filename:fileName(p) };
+          if (p.hq.replaceItemId != null) fields.item_id = p.hq.replaceItemId;
+          else { fields.project_id = p.hq.projectId; if (p.hq.slot != null) fields.slot = p.hq.slot; }
+          for (const [key,value] of Object.entries(fields)) data.append(key, value);
+          data.append("photo", p.blob, fileName(p)); data.append("thumb", p.thumb, "thumb.jpg");
+          let r;
+          try { r = await hubFetch(`/api/store-photo/${p.hq.replaceItemId != null ? "replace" : "upload"}`, { method:"POST", body:data }); }
+          catch (error) {
+            if (!current()) return;
+            sendNotice(`서버에 닿지 못했어요: ${error?.name === "AbortError" ? "응답 시간 초과" : error?.message || "연결 실패"}`);
+            throw error;
+          }
+          if (!current()) return;
+          let result; try { result = await r.json(); } catch (error) { if (r.ok) throw error; }
+          if (!current()) return;
+          if (!r.ok) endReason = "실패";
+          if (r.status === 423) {
+            activeUpload = null; delete p.sendError;
+            await pauseProject(p.hq.projectId, current);
+            if (current()) { render(); cameraBusy(); }
+            return;
+          }
+          if (r.status >= 400 && r.status < 500) {
+            p.sendError = result?.error || "사진을 보내지 못했어요";
+            activeUpload = null; await recordSend(p, "failed", `✗ 실패: ${p.sendError}`);
+          } else if (!r.ok || !result?.ok) throw Error(result?.error || `서버 응답 오류 ${r.status}`);
+          else {
+            // The server has accepted this uid; phone storage must not undo success.
+            p.sent = true;
+            p.log = [...(p.log || []), { at:Date.now(), state:"complete", msg:`✓ 업로드 완료 (${batchDone + 1}/${batchTotal})` }].slice(-10);
+            delete p.paused; delete p.sendError; delete p.retryable;
+            pendingSentSaves.add(p); void saveSent(p);
+            batchSuccess++; activeUpload = null; uploadSucceeded(p);
+          }
+          if (!current()) return;
+          batchDone++; retryDelay = 2000; render();
+        } catch (error) {
+          if (!current()) return;
+          endReason = "실패";
+          activeUpload = null;
+          p.sendError = error?.name === "AbortError" ? "응답 시간 초과 · 자동 재시도 대기" : error?.message || "연결 실패 · 자동 재시도 대기";
+          p.retryable = true;
+          uploadProgress(`✗ 실패: ${p.sendError} — ${retryDelay / 1000}초 뒤 다시 시도`, { flow:true });
+          render();
+          await recordSend(p, "failed", `✗ 실패: ${p.sendError}`, false).catch(() => {});
+          if (!current()) return;
+          retry(); return "retry";
         }
-        if (r.status >= 400 && r.status < 500) {
-          p.sendError = result?.error || "사진을 보내지 못했어요";
-          activeUpload = null; await recordSend(p, "failed", `✗ 실패: ${p.sendError}`);
-        } else if (!r.ok || !result?.ok) throw Error(result?.error || `서버 응답 오류 (${r.status})`);
-        else {
-          p.sent = true; batchSuccess++; delete p.paused; delete p.sendError; activeUpload = null;
-          await recordSend(p, "complete", `✓ 업로드 완료 (${batchDone + 1}/${batchTotal})`); uploadSucceeded(p);
-        }
-        if (photos.includes(p)) await put("photos", p);
-        batchDone++; retryDelay = 2000; render(); await refreshHQ();
-      } catch (error) {
-        activeUpload = null;
-        p.sendError = error?.name === "AbortError" ? "응답 시간 초과 · 자동 재시도 대기" : error?.message || "연결 실패 · 자동 재시도 대기";
-        p.retryable = true; await recordSend(p, "failed", `✗ 실패: ${p.sendError} — ${retryDelay / 1000}초 뒤 다시 시도`); render();
-        retryTimer = setTimeout(() => sendHQ(projectId), retryDelay); retryDelay = Math.min(60000, retryDelay * 2); return;
-      }
+      };
+      const timeout = new Promise(resolve => {
+        watchdog = setTimeout(() => {
+          ++uploadRound; ++uploadRun; activeUpload = null; sending = false;
+          renderHQ();
+          uploadProgress("전송 끝 · 이유=30초 감시", { flow:true });
+          p.sent = false; p.sendError = "응답이 없어 멈췄어요 · 다시 보내 주세요"; p.retryable = true;
+          uploadProgress(p.sendError, { flow:true }); sendNotice("전송이 멈춰서 다시 시도할게요");
+          void put("photos", p).catch(() => {});
+          render(); renderLog(); updateCounts(); retry(); resolve("timeout");
+        }, 30000);
+      });
+      let outcome;
+      try { outcome = await Promise.race([work(), timeout]); }
+      finally { clearTimeout(watchdog); }
+      if (!current() || outcome === "retry" || outcome === "timeout") return;
+      await refreshHQ();
+      if (run !== uploadRun) return;
     }
     if (batchSuccess) hqSuccess.set(String(projectId), batchSuccess);
     if (batchSuccess && !photos.some(p => p.hq && same(p.hq.projectId, projectId) && !p.sent)) uploadProgress(`전송 완료 ${batchSuccess}장`, { flow:true, finished:true });
     else if (batchTotal) stripTimer = setTimeout(() => { $("uploadStrip").hidden = true; }, 5000);
     batchDone = batchTotal = batchSuccess = 0; showSendProgress(projectId); renderHQ();
-  } finally { activeUpload = null; sending = false; renderHQ(); renderLog(); updateCounts(); applyAppUpdate(); }
+  } catch (error) {
+    endReason = "실패";
+    throw error;
+  } finally {
+    if (run === uploadRun) {
+      activeUpload = null; sending = false;
+      renderHQ();
+      uploadProgress(`전송 끝 · 이유=${endReason}`, { flow:true });
+      renderLog(); updateCounts(); applyAppUpdate();
+    }
+  }
 }
 window.addEventListener("online", () => { refreshHQ(); });
 document.addEventListener("visibilitychange", async () => {
