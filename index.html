@@ -230,6 +230,8 @@ svg { display: block; }
 .hq-send-result { color:var(--ok); font-weight:700; font-size:.88em; }
 #hqPick .sheet { gap:8px; }
 #hqPick button { width:100%; padding:14px; border-radius:12px; background:var(--panel-3); font-weight:700; }
+#hqPick button:not(#hqPickCancel) { display:flex; align-items:center; justify-content:center; gap:8px; }
+#hqPick button svg { width:20px; height:20px; }
 #hqPickCancel { color:var(--muted); }
 .viewer .hq-view-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 var(--gutter-r) calc(var(--sb) + 12px) var(--gutter); }
 .viewer .hq-view-actions button { flex:1; padding:10px; border-radius:10px; background:var(--panel-2); font-size:.85em; white-space:nowrap; }
@@ -322,7 +324,57 @@ body.hq-expanded .hq-summary .chip { padding:4px 9px; }
 .page-dots i.active { width:13px; border-radius:5px; background:var(--stamp); }
 .drag-ghost { position:fixed; z-index:32; object-fit:cover; opacity:.7; transform:scale(1.08); pointer-events:none; border-radius:8px; box-shadow:0 18px 34px #000b; will-change:left,top; }
 body.dragging-photo, body.dragging-photo * { user-select:none !important; -webkit-user-select:none !important; -webkit-touch-callout:none !important; }
-@media (max-height:650px) { body.hq-expanded #hqCards { grid-template-rows:auto minmax(0, 1fr) minmax(0, 1.3fr); } body.hq-expanded .hq-summary .hq-meta { display:none; } }
+@media (max-height:650px) { body.hq-expanded .hq-summary .hq-meta { display:none; } }
+/* Headquarters overview follows the 390 × 844 mockup. */
+body.hq-expanded .main { height:calc(100dvh - var(--st) - 54px); padding:4px var(--gutter-r) calc(var(--dock-h) + 12px) var(--gutter); display:flex; flex-direction:column; gap:12px; }
+body.hq-expanded #hqCards { height:100%; display:flex; flex-direction:column; gap:12px; }
+body.hq-expanded .hq-rail { flex:none; padding:1px 0; gap:12px; }
+body.hq-expanded .hq-summary { flex:0 0 100%; display:flex; flex-direction:column; gap:0; padding:14px; border-radius:20px; background:#1b1712; }
+body.hq-expanded .hq-summary:only-child { flex-basis:100%; }
+body.hq-expanded .hq-summary .hq-card-title .hq-meta { display:block; }
+body.hq-expanded .hq-summary .hq-state { display:inline-flex; }
+body.hq-expanded:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) + 12px); }
+body.hq-expanded .hq-summary.open-glow::after { border-radius:18px; background:#1b1712; }
+.hq-summary > :not(.hq-sparks) { position:relative; z-index:2; }
+.hq-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.hq-card-title { min-width:0; display:grid; gap:4px; }
+.hq-card-title strong { font-size:17px; line-height:1.25; font-weight:800; }
+.hq-card-title .hq-meta { font-size:12px; font-weight:400; }
+.hq-deadline { font-weight:700; }
+.hq-log-link { color:var(--muted); font-size:12px; text-align:left; }
+.hq-state { flex:none; display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:999px; background:#34c75922; color:var(--ok); font-size:12px; font-weight:700; }
+.hq-state::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.hq-state.paused { background:#ffb43a22; color:var(--stamp); }
+.hq-summary .section-head { margin:14px 0 8px; font-size:13px; font-weight:700; }
+.hq-summary .section-head small { font-size:12px; font-weight:400; }
+.hq-summary .section-head b { color:var(--stamp); }
+.hq-slot-rail { gap:10px; width:100%; overflow-x:auto; overflow-y:visible; padding-bottom:1px; }
+.hq-slot-rail .hq-cell { flex:0 0 108px; gap:6px; align-content:start; }
+.hq-slot-rail .hq-tile { width:108px; height:108px; max-height:none; aspect-ratio:1; border-radius:14px; }
+.hq-slot-rail .hq-tile.empty { display:grid; place-items:center; border:1.5px dashed #ffb43a66; background:#ffb43a0d; color:var(--stamp); }
+.hq-tile-empty { display:grid; justify-items:center; gap:2px; font-size:10.5px; }
+.hq-tile-empty svg { width:24px; height:24px; stroke-width:1.9; }
+.hq-tile .hq-mag { width:32px; height:32px; border-radius:50%; background:#0008; display:grid; place-items:center; }
+.hq-tile .hq-mag svg { width:19px; height:19px; }
+.hq-tile-status { position:absolute; top:6px; left:6px; padding:3px 7px; border-radius:10px; background:#000a; color:var(--stamp); font-size:10.5px; font-weight:700; line-height:1.3; }
+.hq-tile-status.sent { color:var(--ok); }
+.hq-tile-status.failed { color:var(--err); }
+.hq-caption { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; white-space:normal; line-height:1.3; max-height:2.6em; font-size:12px; color:#d6d6da; }
+.hq-cell:has(.hq-tile.empty) .hq-caption { color:var(--muted); }
+.hq-summary .page-dots { margin-top:10px; }
+.hq-summary .hq-send { display:flex; justify-content:center; align-items:center; gap:8px; height:50px; margin-top:12px; padding:0 12px; border-radius:14px; font-size:16px; }
+.hq-summary .hq-send svg { width:20px; height:20px; }
+.vault-area { flex:1; display:flex; flex-direction:column; gap:10px; min-height:0; padding:14px; border:1px solid var(--line); border-radius:20px; background:var(--panel); margin-bottom:0; }
+.vault-area .section-head { font-size:13px; }
+.vault-area .section-head small { font-size:12px; font-weight:400; }
+.vault-rail { flex:1; min-height:0; align-items:center; }
+.vault-page { flex:0 0 100%; min-width:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:repeat(2,auto); gap:8px; align-content:center; }
+.vault-page .thumb { width:100%; height:auto; aspect-ratio:1; border-radius:12px; }
+.vault-hint { color:var(--muted); font-size:11.5px; text-align:center; }
+body.hq-expanded #saveBtn, body.hq-expanded #uploadBtn { display:none; }
+body.hq-expanded #logDockBtn { display:flex; }
+body.hq-expanded .dock { background:#000; }
+@media (max-height:700px) { body.hq-expanded .hq-summary { padding:11px 14px; } body.hq-expanded .hq-summary .section-head { margin:8px 0 6px; } body.hq-expanded .hq-slot-rail .hq-cell { flex-basis:92px; } body.hq-expanded .hq-slot-rail .hq-tile { width:92px; height:92px; } }
 /* Browser-only home screen installation gate */
 body.install-required { overflow:hidden; }
 body.install-required #appSurface { pointer-events:none; user-select:none; filter:blur(5px) brightness(.35); }
@@ -407,6 +459,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
     <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg><span class="badge" id="badge" hidden>0</span></span>
     저장
   </button>
+  <button class="side" id="logDockBtn" type="button" hidden><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 12h14M5 18h14"/></svg></span>진행 기록</button>
   </div>
 </nav>
 
@@ -476,8 +529,8 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </div></div>
 <div class="scrim" id="hqPick" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hqPickTitle">
   <h2 id="hqPickTitle">사진 채우기</h2>
-  <button id="hqPickCamera" type="button">📷 카메라</button>
-  <button id="hqPickAlbum" type="button">🖼 앨범</button>
+  <button id="hqPickCamera" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>카메라</button>
+  <button id="hqPickAlbum" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>앨범</button>
   <button id="hqPickCancel" type="button">취소</button>
 </div></div>
 <input type="file" id="hqSlotCamera" accept="image/*" capture="environment">
@@ -523,7 +576,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.6"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.7"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -819,8 +872,8 @@ function render() {
       const remote = hqProjects.find(x => String(x.id) === String(pr.hqProjectId));
       if (!remote || !standalone) return toast("열린 본사 취합 프로젝트에서 촬영해 주세요");
       if (projectPaused(remote.id)) return toast("잠시 멈춤 중이에요");
-      const slot = (remote.preset || []).find(x => !slotPhoto(remote, x.key));
-      if (remote.preset?.length && !slot) return toast("본사 확인 전엔 다시 못 올려요");
+      const available = activeHQSlots(remote), slot = available.find(x => !slotPhoto(remote, x.key));
+      if (available.length && !slot) return toast("본사 확인 전엔 다시 못 올려요");
       chooseHQSlot(remote, slot, null);
     };
     const grid = sec.querySelector(".grid");
@@ -899,7 +952,7 @@ $("sheetYes").onclick = async () => {
 
 /* ---------- Viewer ---------- */
 const remoteSelection = new Set();
-const MAGNIFY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg>';
+const MAGNIFY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg>';
 function localOriginal(item) { return item.blob ? item : photos.find(p => p.id === item.uid); }
 function photoControls(el, item, group) {
   const local = localOriginal(item), selection = local ? sel : remoteSelection;
@@ -1124,7 +1177,7 @@ if (!standalone) {
   };
   $("installGate").querySelector(".install-card").focus({ preventScroll:true });
 }
-let selectedHQ = null;
+let selectedHQ;
 const hqSuccess = new Map();
 let hqProjects = [], statusVersion = 0, camHQ = null, sessionPhotos = [], albumHQ = null;
 let sending = false, retryTimer, retryDelay = 2000, batchDone = 0, batchTotal = 0;
@@ -1188,6 +1241,7 @@ function slotPhoto(project, key) {
   return localHQ(project).filter(p => same(p.hq.slot, key)).sort((a,b) => b.ts-a.ts)[0] ||
     (project.items || []).find(i => same(i.slot, key));
 }
+const activeHQSlots = project => (project.preset || []).filter(slot => !slot.deleted && !slot.deleted_at);
 function projectPeriod(project) {
   const date = value => {
     if (!value) return null;
@@ -1204,83 +1258,112 @@ const cardVisibility = typeof IntersectionObserver === "function" ? new Intersec
 function renderHQ() {
   cardVisibility?.disconnect();
   const root = $("hqCards"), scroll = root.querySelector(".hq-rail")?.scrollLeft || 0;
-  const slotScroll = root.querySelector(".hq-slot-rail")?.scrollLeft || 0;
+  const slotScroll = root.querySelector(".hq-summary.active .hq-slot-rail")?.scrollLeft || 0;
   const vaultScroll = root.querySelector(".vault-rail")?.scrollLeft || 0;
   root.textContent = "";
   const visible = hqProjects.filter(p => p.state === "open" || p.state === "paused");
   root.hidden = !standalone || !storeSel.value || !visible.length;
-  if (root.hidden) { document.body.classList.remove("hq-expanded"); $("dock").hidden = false; $("groups").hidden = false; $("newProj").hidden = false; return; }
-  if (!visible.some(p => same(p.id, selectedHQ))) selectedHQ = null;
+  if (root.hidden) {
+    document.body.classList.remove("hq-expanded");
+    $("logDockBtn").hidden = true;
+    $("dock").hidden = false; $("groups").hidden = false; $("newProj").hidden = false;
+    return;
+  }
+  if (selectedHQ === undefined || (selectedHQ !== null && !visible.some(p => same(p.id, selectedHQ)))) selectedHQ = visible[0].id;
   const expanded = selectedHQ !== null;
   document.body.classList.toggle("hq-expanded", expanded);
+  $("logDockBtn").hidden = !expanded;
   $("dock").hidden = false; $("groups").hidden = expanded; $("newProj").hidden = expanded;
   $("toolbar").hidden = expanded || !photos.some(p => !p.hq);
   const rail = document.createElement("div"); rail.className = "hq-rail";
   for (const project of visible) {
     const paused = projectPaused(project.id), active = same(selectedHQ, project.id);
-    const box = document.createElement("section"); box.className = "hq-summary" + (active ? " active" : "") + (paused ? " paused-glow" : " open-glow");
-    if (!paused) { const sparks = document.createElement("span"); sparks.className = "hq-sparks"; sparks.setAttribute("aria-hidden", "true"); box.appendChild(sparks); }
-    const button = document.createElement("button"); button.type = "button"; button.className = "project-open";
-    button.setAttribute("aria-expanded", String(active)); button.setAttribute("aria-controls", "hqDetail");
-    const title = document.createElement("strong"); title.textContent = project.name; button.appendChild(title);
-    const period = projectPeriod(project), dates = document.createElement("span"); dates.className = "hq-meta"; dates.textContent = period.text;
-    if (period.days !== null && period.days >= 0 && period.days <= 3) {
-      const due = document.createElement("span"); due.className = "hq-deadline"; due.textContent = ` · D-${period.days}`; dates.appendChild(due);
+    const slots = activeHQSlots(project);
+    const filled = slots.filter(slot => !!slotPhoto(project, slot.key)).length;
+    const waiting = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.sent);
+    const box = document.createElement("section");
+    box.className = "hq-summary" + (active ? " active" : "") + (paused ? " paused-glow" : " open-glow");
+    if (!paused) {
+      const sparks = document.createElement("span"); sparks.className = "hq-sparks";
+      sparks.setAttribute("aria-hidden", "true"); box.appendChild(sparks);
     }
-    button.appendChild(dates);
-    const state = document.createElement("span"); state.className = "hq-state" + (paused ? " paused" : ""); state.textContent = paused ? "잠시 멈춤" : "열림"; button.appendChild(state);
-    const progress = document.createElement("span"); progress.className = "hq-meta";
-    progress.textContent = project.preset?.length ? `칸 ${project.preset.filter(slot => !!slotPhoto(project, slot.key)).length}/${project.preset.length}` : `${Number(project.total || 0) + localHQ(project).length}장`;
-    button.appendChild(progress);
-    const local = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.sent);
-    const queue = document.createElement("div"); queue.className = "hq-queue";
-    for (const [label, count, style] of [["대기", local.filter(p => !p.sendError).length, "queue-dot"], ["실패", local.filter(p => p.sendError).length, "error-dot"]]) {
-      const dot = document.createElement("span"); dot.className = count ? style : ""; dot.textContent = `● ${label} ${count}`; queue.appendChild(dot);
+    const head = document.createElement("div"); head.className = "hq-card-head";
+    const cardTitle = document.createElement("div"); cardTitle.className = "hq-card-title";
+    const open = document.createElement("button"); open.type = "button"; open.className = "project-open";
+    open.setAttribute("aria-expanded", String(expanded && active));
+    const title = document.createElement("strong"); title.textContent = project.name; open.appendChild(title);
+    open.onclick = () => { selectedHQ = expanded && active ? null : project.id; renderHQ(); };
+    cardTitle.appendChild(open);
+    const period = projectPeriod(project), dates = document.createElement("span"); dates.className = "hq-meta";
+    dates.textContent = period.text;
+    if (period.days !== null && period.days >= 0) {
+      const due = document.createElement("span"); due.className = "hq-deadline"; due.textContent = " · D-" + period.days; dates.appendChild(due);
     }
-    button.appendChild(queue);
-    button.onclick = () => { selectedHQ = active ? null : project.id; renderHQ(); };
-    box.appendChild(button);
-    const logs = document.createElement("button"); logs.type = "button"; logs.className = "chip"; logs.textContent = "진행 기록"; logs.onclick = () => openLog(project.id); box.appendChild(logs);
+    const log = document.createElement("button"); log.type = "button"; log.className = "hq-log-link";
+    log.textContent = " · 진행 기록 ›"; log.onclick = () => openLog(project.id);
+    dates.appendChild(log); cardTitle.appendChild(dates); head.appendChild(cardTitle);
+    const state = document.createElement("span"); state.className = "hq-state" + (paused ? " paused" : "");
+    state.textContent = paused ? "잠시 멈춤" : "열림"; head.appendChild(state); box.appendChild(head);
+    if (expanded) {
+      const sectionHead = document.createElement("div"); sectionHead.className = "section-head";
+      const sectionTitle = document.createElement("span"); sectionTitle.textContent = "본사로 보낼 사진";
+      const count = document.createElement("small");
+      if (slots.length) {
+        const number = document.createElement("b"); number.textContent = filled;
+        count.append(number, " / " + slots.length + "칸 채움");
+      } else count.textContent = (Number(project.total || 0) + localHQ(project).length) + "장";
+      sectionHead.append(sectionTitle, count); box.appendChild(sectionHead);
+      const slotRail = document.createElement("div"); slotRail.className = "hq-slot-rail";
+      if (slots.length) for (const slot of slots) slotRail.appendChild(hqTile(project, slotPhoto(project, slot.key), slot));
+      else {
+        const locals = localHQ(project);
+        for (const item of project.items || []) if (!locals.some(p => same(p.hq.replaceItemId, item.id))) slotRail.appendChild(hqTile(project, item));
+        for (const p of locals) slotRail.appendChild(hqTile(project, p));
+        const add = document.createElement("button"); add.className = "chip"; add.textContent = "사진 추가";
+        add.onclick = () => chooseHQSlot(project, null, null); slotRail.appendChild(add);
+      }
+      box.appendChild(slotRail);
+      const pages = Math.max(1, Math.ceil(slotRail.children.length / 3));
+      const dots = document.createElement("div"); dots.className = "page-dots";
+      for (let i = 0; i < pages; i++) { const dot = document.createElement("i"); if (!i) dot.className = "active"; dots.appendChild(dot); }
+      slotRail.onscroll = () => {
+        const page = Math.min(pages - 1, Math.round(slotRail.scrollLeft / Math.max(1, slotRail.clientWidth)));
+        dots.querySelectorAll("i").forEach((dot, i) => dot.classList.toggle("active", i === page));
+      };
+      box.appendChild(dots);
+      const failed = waiting.some(p => p.sendError);
+      const send = document.createElement("button"); send.type = "button"; send.className = "hq-send" + (failed ? " retry" : "");
+      send.disabled = !waiting.length || paused || sending;
+      send.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V4m0 0-4 4m4-4 4 4M5 20h14"/></svg><span></span>';
+      send.querySelector("span").textContent = paused ? "잠시 멈춤 — 다시 열리면 전송할 수 있어요" : !waiting.length ? "전송할 사진이 없어요" : sending ? "전송 중…" : failed ? "다시 전송 (" + waiting.length + "장)" : "전송 (" + waiting.length + "장)";
+      send.onclick = () => sendProjectHQ(project); box.appendChild(send);
+      const completed = hqSuccess.get(String(project.id));
+      if (completed && !waiting.length) count.textContent = "전송 완료 " + completed + "장";
+    } else {
+      const progress = document.createElement("span"); progress.className = "hq-meta";
+      progress.textContent = slots.length ? "칸 " + filled + "/" + slots.length : (Number(project.total || 0) + localHQ(project).length) + "장";
+      box.appendChild(progress);
+    }
     rail.appendChild(box);
   }
-  root.appendChild(rail); rail.scrollLeft = scroll;
+  root.appendChild(rail);
+  rail.scrollLeft = scroll;
+  const activeSlotRail = rail.querySelector(".hq-summary.active .hq-slot-rail");
+  if (activeSlotRail) { activeSlotRail.scrollLeft = slotScroll; activeSlotRail.onscroll(); }
   for (const box of rail.querySelectorAll(".open-glow")) cardVisibility?.observe(box);
-  const project = visible.find(p => same(p.id, selectedHQ));
-  if (project) {
-    const card = document.createElement("section"); card.id = "hqDetail"; card.className = "hq-card send-area" + (projectPaused(project.id) ? " paused" : "");
-    const head = document.createElement("div"); head.className = "section-head";
-    const title = document.createElement("span"); title.textContent = "본사로 보낼 사진";
-    const count = document.createElement("small");
-    count.textContent = project.preset?.length ? `칸 ${project.preset.filter(slot => !!slotPhoto(project, slot.key)).length}/${project.preset.length} 채움` : `${Number(project.total || 0) + localHQ(project).length}장`;
-    head.append(title, count); card.appendChild(head);
-    const slotRail = document.createElement("div"); slotRail.className = "hq-slot-rail";
-    if (project.preset?.length) {
-      for (const slot of project.preset) slotRail.appendChild(hqTile(project, slotPhoto(project, slot.key), slot));
-    } else {
-      const locals = localHQ(project);
-      for (const item of project.items || []) {
-        if (!locals.some(p => same(p.hq.replaceItemId, item.id))) slotRail.appendChild(hqTile(project, item));
-      }
-      for (const p of locals) slotRail.appendChild(hqTile(project, p));
-      const add = document.createElement("button"); add.className = "chip"; add.textContent = "사진 추가";
-      add.onclick = () => chooseHQSlot(project, null, null); slotRail.appendChild(add);
-    }
-    card.appendChild(slotRail);
-    const waiting = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && !p.sent);
-    const failed = waiting.some(p => p.sendError);
-    const send = document.createElement("button"); send.type = "button"; send.className = "hq-send" + (failed ? " retry" : "");
-    send.disabled = !waiting.length || projectPaused(project.id) || sending;
-    send.textContent = projectPaused(project.id) ? "잠시 멈춤 — 다시 열리면 전송할 수 있어요" : !waiting.length ? "전송할 사진이 없어요" : sending ? "전송 중…" : failed ? `다시 전송 (${waiting.length}장)` : `전송 (${waiting.length}장)`;
-    send.onclick = () => sendProjectHQ(project); card.appendChild(send);
-    const completed = hqSuccess.get(String(project.id));
-    if (completed && !waiting.length) count.textContent = `전송 완료 ${completed}장`;
-    root.appendChild(card);
-    slotRail.scrollLeft = slotScroll;
+  if (expanded) {
+    rail.onscroll = () => {
+      clearTimeout(rail._pageTimer);
+      rail._pageTimer = setTimeout(() => {
+        const page = Math.min(visible.length - 1, Math.round(rail.scrollLeft / Math.max(1, rail.clientWidth)));
+        if (!same(selectedHQ, visible[page].id)) { selectedHQ = visible[page].id; renderHQ(); }
+      }, 160);
+    };
     const vault = document.createElement("section"); vault.className = "vault-area";
     const vaultHead = document.createElement("div"); vaultHead.className = "section-head";
-    const vaultTitle = document.createElement("span"); vaultTitle.textContent = "내 보관함 (아직 안 보냄)";
+    const vaultTitle = document.createElement("span"); vaultTitle.textContent = "내 보관함 · 아직 안 보냄";
     const personal = photos.filter(p => !p.hq).sort((a,b) => b.ts - a.ts);
-    const vaultCount = document.createElement("small"); vaultCount.textContent = `${personal.length}장`;
+    const vaultCount = document.createElement("small");
     vaultHead.append(vaultTitle, vaultCount); vault.appendChild(vaultHead);
     const vaultRail = document.createElement("div"); vaultRail.className = "vault-rail";
     const pages = Math.max(1, Math.ceil(personal.length / 6));
@@ -1292,10 +1375,17 @@ function renderHQ() {
       vaultRail.appendChild(panel);
     }
     vault.appendChild(vaultRail);
-    const dots = document.createElement("div"); dots.className = "page-dots"; dots.setAttribute("aria-label", `보관함 ${pages}쪽`);
+    const dots = document.createElement("div"); dots.className = "page-dots"; dots.setAttribute("aria-label", "보관함 " + pages + "쪽");
     for (let i = 0; i < pages; i++) { const dot = document.createElement("i"); if (!i) dot.className = "active"; dots.appendChild(dot); }
-    vaultRail.onscroll = () => { const page = Math.round(vaultRail.scrollLeft / Math.max(1, vaultRail.clientWidth)); dots.querySelectorAll("i").forEach((dot,i) => dot.classList.toggle("active", i === page)); };
-    vault.appendChild(dots); root.appendChild(vault);
+    vaultRail.onscroll = () => {
+      const page = Math.min(pages - 1, Math.round(vaultRail.scrollLeft / Math.max(1, vaultRail.clientWidth)));
+      dots.querySelectorAll("i").forEach((dot,i) => dot.classList.toggle("active", i === page));
+      vaultCount.textContent = personal.length + "장 · " + (page + 1) + "/" + pages + "쪽";
+    };
+    vault.appendChild(dots);
+    const hint = document.createElement("div"); hint.className = "vault-hint";
+    hint.textContent = "사진을 꾹 눌러 위 칸으로 끌어 놓으면 채워져요";
+    vault.appendChild(hint); root.appendChild(vault);
     vaultRail.scrollLeft = vaultScroll; vaultRail.onscroll();
   }
 }
@@ -1307,7 +1397,10 @@ function hqTile(project, item, slot) {
   if (item) {
     try { el.style.backgroundImage = `url(${JSON.stringify(local ? thumbURL(item) : new URL(item.thumb_url, SERVER).href)})`; } catch {}
     el.classList.toggle("requested", requested); el.classList.toggle("error", !!item.sendError);
-  } else { el.classList.add("empty"); el.innerHTML = CAMPLUS; }
+  } else { el.classList.add("empty"); el.innerHTML = '<span class="hq-tile-empty">' + CAMPLUS + '<span>눌러서 찍기</span></span>'; }
+  if (item) {
+    const mag = document.createElement("span"); mag.className = "hq-mag"; mag.innerHTML = MAGNIFY; el.appendChild(mag);
+  }
   const caption = document.createElement("span"); caption.className = "hq-caption";
   caption.textContent = slot?.name || item?.name || item?.slot || "사진";
   cell.append(el, caption); el.setAttribute("aria-label", caption.textContent + (requested ? " 수정요청" : item ? " 크게 보기" : " 채우기"));
@@ -1318,10 +1411,10 @@ function hqTile(project, item, slot) {
     const note = document.createElement("span"); note.className = "hq-note"; note.textContent = `수정요청: ${request?.request_note || "사진을 교체해 주세요"}`; cell.appendChild(note);
   }
   if (item && !requested) {
-    const status = document.createElement("span"); status.className = "hq-status";
+    const status = document.createElement("span");
     status.textContent = item.paused || projectPaused(project.id) ? "잠시 멈춤" : item.sendError ? "전송 실패" : local && !item.sent ? "보내기 전" : "전송됨";
-    status.classList.toggle("sent", status.textContent === "전송됨"); status.classList.toggle("failed", !!item.sendError);
-    cell.appendChild(status);
+    status.className = "hq-tile-status" + (status.textContent === "전송됨" ? " sent" : item.sendError ? " failed" : "");
+    el.appendChild(status);
   }
   el.onclick = () => {
     if (requested || !item) chooseHQSlot(project, slot, requested ? item : null);
@@ -1527,8 +1620,8 @@ function cameraBusy() {
 function advanceHQ(target) {
   if (!camHQ || $("cam").hidden || !sessionPhotos.some(p => same(p.hq.slot, target.slot) && same(p.hq.replaceItemId, target.replaceItemId))) return;
   const project = hqProjects.find(p => same(p.id, target.projectId));
-  if (project && target.replaceItemId == null && !project.preset?.length) return;
-  const next = target.replaceItemId == null ? project?.preset?.find(s => !slotPhoto(project, s.key)) : null;
+  if (project && target.replaceItemId == null && !activeHQSlots(project).length) return;
+  const next = target.replaceItemId == null ? activeHQSlots(project).find(s => !slotPhoto(project, s.key)) : null;
   if (next) { camHQ = { ...target, slot:next.key }; updateCamSlot(); }
   else { closeCamera(); $("hqFinish").hidden = false; }
 }
@@ -1559,7 +1652,7 @@ function uploadProgress(msg, { flow = false, finished = false } = {}) {
   clearTimeout(stripTimer);
   $("uploadStripText").textContent = msg; $("uploadStrip").hidden = false;
   if (flow) { flowLog = [...flowLog, { at:Date.now(), msg }].slice(-30); ls.set("hqFlowLog", JSON.stringify(flowLog)); renderLog(); }
-  if (finished) stripTimer = setTimeout(() => { $("uploadStrip").hidden = true; }, 5000);
+  stripTimer = setTimeout(() => { $("uploadStrip").hidden = true; }, 4000);
 }
 async function resumeUploads() {
   if (!standalone) return;
@@ -1570,6 +1663,7 @@ async function resumeUploads() {
   for (const p of list) await recordSend(p, "waiting", msg, false);
 }
 $("uploadStrip").onclick = () => openLog();
+$("logDockBtn").onclick = () => openLog(selectedHQ);
 function sendState(p) {
   return p.sent ? "complete" : p.paused || projectPaused(p.hq.projectId) ? "paused" : p.sendError ? "failed" : activeUpload === p.id ? "sending" : "waiting";
 }
