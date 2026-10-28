@@ -411,6 +411,34 @@ body.hq-expanded #saveBtn, body.hq-expanded #uploadBtn { display:none; }
 body.hq-expanded #logDockBtn { display:flex; }
 body.hq-expanded .dock { background:#000; }
 @media (max-height:700px) { body.hq-expanded .hq-summary { padding:11px 14px; } body.hq-expanded .hq-summary .section-head { margin:8px 0 6px; } body.hq-expanded .hq-slot-rail .hq-cell { flex-basis:92px; } body.hq-expanded .hq-slot-rail .hq-tile { width:92px; height:92px; } }
+/* Project cards use the space released by the personal photo sheet. */
+body.hq-expanded .main { padding-top:0; padding-bottom:calc(var(--dock-h) + 4px); }
+body.hq-expanded .hq-card-title { gap:0; }
+body.hq-expanded #hqCards { grid-template-rows:minmax(0,1fr); }
+body.hq-expanded .hq-rail { height:100%; align-items:stretch; }
+body.hq-expanded .hq-summary { height:100%; min-height:0; overflow:hidden; }
+body.hq-expanded .hq-summary { padding:8px 10px; }
+body.hq-expanded .hq-summary .section-head { margin:2px 0; }
+body.hq-expanded .hq-summary .page-dots { margin-top:4px; }
+body.hq-expanded .hq-summary .hq-send { height:40px; flex:none; margin-top:6px; }
+body.hq-expanded .hq-slot-rail { flex:1; min-height:0; container-type:size; overflow-y:hidden; align-items:stretch; gap:0; padding:0; }
+body.hq-expanded .hq-slot-page { flex:0 0 100%; min-width:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:max-content; gap:8px 10px; align-content:start; scroll-snap-align:start; }
+body.hq-expanded .hq-slot-page .hq-cell { gap:2px; width:var(--hq-tile); min-width:0; }
+body.hq-expanded .hq-slot-page .hq-tile { width:100%; height:auto; aspect-ratio:1; }
+body.hq-expanded .hq-slot-page .hq-caption { line-height:16px; max-height:16px; -webkit-line-clamp:1; }
+body.hq-expanded .hq-slot-page .hq-note { position:absolute; bottom:18px; left:4px; right:4px; background:#000b; max-height:32px; overflow-y:auto; }
+.my-photos-sheet { position:fixed; inset:0; z-index:34; background:var(--panel); padding:calc(var(--st) + 8px) var(--gutter-r) calc(var(--sb) + 12px) var(--gutter); display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:12px; transform:translateY(0); }
+.my-photos-sheet.is-opening { animation:photos-enter .2s ease-out; }
+@keyframes photos-enter { from { transform:translateY(-100%); } to { transform:translateY(0); } }
+.my-photos-handle { position:relative; min-height:36px; display:flex; justify-content:flex-end; align-items:center; touch-action:none; }
+.my-photos-handle i { position:absolute; left:50%; top:6px; transform:translateX(-50%); width:38px; height:4px; border-radius:4px; background:var(--muted); }
+.my-photos-heading { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:11px; white-space:nowrap; }
+.my-photos-heading .chip { padding:7px 8px; font-size:11px; }
+.my-photos-heading .vault-actions { font-size:11px; gap:6px; }
+.my-photos-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; align-content:start; overflow-y:auto; min-height:0; overscroll-behavior:contain; border-radius:0; }
+.my-photos-grid .thumb { border-radius:10px; }
+.my-photos-hint { margin:0; color:var(--muted); font-size:10px; text-align:center; white-space:nowrap; }
+@media (prefers-reduced-motion:reduce) { .my-photos-sheet { animation:none; } }
 /* Browser-only home screen installation gate */
 body.install-required { overflow:hidden; }
 body.install-required #appSurface { pointer-events:none; user-select:none; filter:blur(5px) brightness(.35); }
@@ -484,10 +512,11 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 
 <nav class="dock" id="dock">
   <input type="file" id="lib" accept="image/*" multiple>
-  <label class="side" for="lib">
+  <label class="side" id="albumDock" for="lib">
     <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg></span>
     앨범
   </label>
+  <button class="side" id="myPhotosDock" type="button" hidden><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg><span class="badge" id="myPhotosBadge" hidden>0</span></span>내 사진</button>
   <button class="shutter" id="openCam" type="button" aria-label="카메라 열기"><i></i></button>
   <div class="dock-actions">
   <button class="side" id="uploadBtn" type="button" hidden><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V4m0 0-4 4m4-4 4 4M5 20h14"/></svg><span class="badge" id="uploadBadge" hidden>0</span></span>업로드</button>
@@ -498,6 +527,13 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
   <button class="side" id="logDockBtn" type="button" hidden><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 12h14M5 18h14"/></svg></span>진행 기록</button>
   </div>
 </nav>
+
+<section id="myPhotosSheet" class="my-photos-sheet" role="dialog" aria-modal="true" aria-labelledby="myPhotosTitle" hidden>
+  <div id="myPhotosHandle" class="my-photos-handle"><i></i><button id="myPhotosClose" class="chip" type="button">닫기</button></div>
+  <div class="my-photos-heading"><div id="myPhotosTitle"></div><button id="myPhotosImport" class="chip" type="button">앨범에서 가져오기</button></div>
+  <div id="myPhotosGrid" class="grid my-photos-grid"></div>
+  <p class="my-photos-hint">내 사진은 이 폰에만 있어요 · 앱을 지우면 함께 지워져요</p>
+</section>
 
 <!-- Camera -->
 <section class="cam" id="cam" hidden>
@@ -529,7 +565,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
     <button class="cam-x" id="vClose" type="button" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
   <div class="vimg"><img id="vImg" alt="" draggable="false"></div>
   <div class="vbot"><button class="chip" id="vPrev" type="button" aria-label="이전 사진">‹</button><span id="vInfo"></span><button class="chip" id="vNext" type="button" aria-label="다음 사진">›</button><button class="chip" id="vSave" type="button">사진첩에 저장</button></div>
-  <div class="hq-view-actions" id="vHQActions" hidden><button id="vRetake" type="button">다시 찍기</button><button id="vReplaceAlbum" type="button">앨범에서 바꾸기</button><button id="vClear" type="button">칸 비우기</button></div>
+  <div class="hq-view-actions" id="vHQActions" hidden><button id="vRetake" type="button">다시 찍기</button><button id="vReplaceAlbum" type="button">앨범에서 바꾸기</button><button id="vChoosePhoto" type="button">사진 바꾸기</button><button id="vClear" type="button">칸 비우기</button></div>
 </div>
 
 <div class="scrim" id="sheet" hidden>
@@ -567,6 +603,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
   <h2 id="hqPickTitle">사진 채우기</h2>
   <button id="hqPickCamera" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>카메라</button>
   <button id="hqPickAlbum" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>앨범</button>
+  <button id="hqPickVault" type="button" hidden>내 사진에서 고르기</button>
   <button id="hqPickCancel" type="button">취소</button>
 </div></div>
 <input type="file" id="hqSlotCamera" accept="image/*" capture="environment">
@@ -612,7 +649,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.12"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.13"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -1051,7 +1088,7 @@ function render() {
     for (const p of ph) grid.appendChild(thumbEl(p));
     g.appendChild(sec);
   }
-  updateCounts(); renderHQ(); renderLog();
+  updateCounts(); renderHQ(); renderMyPhotos(); renderLog();
 }
 function thumbEl(p) {
   const el = document.createElement("div");
@@ -1073,6 +1110,7 @@ function thumbEl(p) {
 function updateCounts() {
   for (const id of sel) if (!photos.some(p => p.id === id && !p.hq)) sel.delete(id);
   const personal = photos.filter(p => !p.hq);
+  $("myPhotosBadge").textContent = personal.length; $("myPhotosBadge").hidden = !personal.length;
   const n = sel.size, size = personal.filter(p => sel.has(p.id)).reduce((a, p) => a + (p.blob?.size || 0), 0);
   $("selCount").innerHTML = n ? `${n}장 선택<small>${fmtSize(size)}</small>` : `선택 없음`;
   $("badge").hidden = !n; $("badge").textContent = n;
@@ -1088,6 +1126,73 @@ function updateCounts() {
 $("selAll").onclick = () => { const personal = photos.filter(p => !p.hq), allOn = personal.every(p => sel.has(p.id)); sel.clear(); if (!allOn) personal.forEach(p => sel.add(p.id)); render(); };
 $("selToday").onclick = () => { defaultSelect(); render(); };
 $("newProj").onclick = async () => openCamera(await newProject());
+
+let myPhotosTarget = null, choosingMyPhoto = false;
+function closeMyPhotos(focus = true) {
+  const wasOpen = !$("myPhotosSheet").hidden;
+  $("myPhotosSheet").hidden = true; $("myPhotosSheet").classList.remove("is-opening"); myPhotosTarget = null;
+  if (focus && wasOpen) $("myPhotosDock").focus();
+}
+function openMyPhotos(target = null) {
+  myPhotosTarget = target; sel.clear();
+  $("myPhotosSheet").hidden = false;
+  $("myPhotosSheet").classList.remove("is-opening");
+  void $("myPhotosSheet").offsetHeight;
+  $("myPhotosSheet").classList.add("is-opening");
+  $("myPhotosGrid").scrollTop = 0;
+  updateCounts(); renderMyPhotos(); $("myPhotosClose").focus();
+}
+function renderMyPhotos() {
+  if ($("myPhotosSheet").hidden) return;
+  const personal = photos.filter(p => !p.hq).sort((a,b) => b.ts - a.ts);
+  const head = $("myPhotosTitle"), grid = $("myPhotosGrid"), scroll = grid.scrollTop;
+  head.textContent = ""; grid.textContent = "";
+  $("myPhotosImport").hidden = !!myPhotosTarget;
+  if (myPhotosTarget) head.textContent = `${myPhotosTarget._hqSlot.name} 칸에 넣을 사진을 골라 주세요`;
+  else {
+    const chosen = personal.filter(p => sel.has(p.id));
+    if (chosen.length) {
+      const actions = document.createElement("div"); actions.className = "vault-actions";
+      const count = document.createElement("span"); count.textContent = `${chosen.length}장 선택 ·`; actions.appendChild(count);
+      for (const [label, action] of [["사진첩에 저장", () => $("saveBtn").onclick()], ["지우기", () => $("delBtn").onclick()], ["해제", () => { sel.clear(); render(); }]]) {
+        const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.onclick = action; actions.appendChild(button);
+      }
+      head.appendChild(actions);
+    } else head.textContent = `내 사진 · ${personal.length}장 · 미저장 ${personal.filter(p => !p.saved && !p.broken).length}장`;
+  }
+  const items = myPhotosTarget ? personal.filter(p => !p.broken && p.blob instanceof Blob) : personal;
+  for (const p of items) {
+    const thumb = thumbEl(p);
+    if (myPhotosTarget) {
+      thumb.querySelectorAll(".photo-check, .photo-preview").forEach(button => button.remove());
+      thumb.classList.remove("sel"); thumb.setAttribute("role", "button"); thumb.tabIndex = 0; thumb.setAttribute("aria-label", "이 사진을 칸에 넣기");
+      thumb.onclick = async () => {
+        if (choosingMyPhoto || !myPhotosTarget) return;
+        choosingMyPhoto = true;
+        try { await movePhotoToSlot(p, myPhotosTarget); if (p.hq) closeMyPhotos(); }
+        finally { choosingMyPhoto = false; }
+      };
+      thumb.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); thumb.click(); } };
+    }
+    grid.appendChild(thumb);
+  }
+  if (!items.length) grid.textContent = myPhotosTarget ? "고를 수 있는 사진이 없어요" : "찍거나 가져온 사진이 여기에 모여요";
+  grid.scrollTop = scroll;
+}
+$("myPhotosDock").onclick = () => openMyPhotos();
+$("myPhotosClose").onclick = () => closeMyPhotos();
+$("myPhotosImport").onclick = () => $("lib").click();
+$("myPhotosSheet").onkeydown = e => { if (e.key === "Escape") closeMyPhotos(); };
+let myPhotosSwipe = null;
+$("myPhotosHandle").onpointerdown = e => {
+  if (e.target.closest("button")) return;
+  myPhotosSwipe = { x:e.clientX, y:e.clientY }; e.currentTarget.setPointerCapture(e.pointerId);
+};
+$("myPhotosHandle").onpointerup = e => {
+  if (myPhotosSwipe && e.clientY - myPhotosSwipe.y > 65 && e.clientY - myPhotosSwipe.y > Math.abs(e.clientX - myPhotosSwipe.x)) closeMyPhotos();
+  myPhotosSwipe = null;
+};
+$("myPhotosHandle").onpointercancel = () => { myPhotosSwipe = null; };
 
 /* ---------- Saving ---------- */
 let toastT;
@@ -1174,6 +1279,7 @@ function stepView(delta) { const next = viewIndex + delta; if (next >= 0 && next
 $("vPrev").onclick = () => stepView(-1); $("vNext").onclick = () => stepView(1);
 $("vClose").onclick = () => { $("viewer").hidden = true; if (viewURL) URL.revokeObjectURL(viewURL); viewURL = null; viewing = null; viewHQ = null; viewItems = []; viewPointers.clear(); };
 $("vRetake").onclick = () => { const choice = viewHQ; $("vClose").click(); if (choice) chooseHQSlot(choice.project, choice.slot, null, choice.item, "camera"); };
+$("vChoosePhoto").onclick = () => { const choice = viewHQ; $("vClose").click(); if (choice) chooseHQSlot(choice.project, choice.slot, choice.item?.status === "requested" ? choice.item : null, choice.item?.hq ? choice.item : null); };
 $("vReplaceAlbum").onclick = () => { const choice = viewHQ; $("vClose").click(); if (choice) chooseHQSlot(choice.project, choice.slot, null, choice.item, "album"); };
 $("vClear").onclick = async () => {
   const choice = viewHQ; if (!choice || choice.item.sent || activeUpload === choice.item.id) return;
@@ -1269,7 +1375,10 @@ async function closeCamera() {
   await queue;
   applyAppUpdate();
   defaultSelect(); render();
-  if (sessionCount) toast(`${sessionCount}장 찍었어요 · 오늘 사진이 선택돼 있어요`);
+  if (sessionCount) {
+    if (!camHQ && document.body.classList.contains("hq-expanded")) { toast("내 사진에 저장됨"); clearTimeout(toastT); toastT = setTimeout(() => $("toast").hidden = true, 2000); }
+    else toast(`${sessionCount}장 찍었어요 · 오늘 사진이 선택돼 있어요`);
+  }
 }
 $("camDone").onclick = () => {
   if (camHQ && pending) return toast("마지막 사진 정리 중…");
@@ -1439,7 +1548,7 @@ async function refreshHQ() {
     render(); updateCamSlot(); cameraBusy(); notifyMissingHQ();
     if (moved) {
       slotMoveNoticeUntil = Date.now() + 4000;
-      uploadProgress(`관리자가 칸을 바꿔서 사진 ${moved}장을 보관함으로 옮겼어요 — 다시 칸에 끌어 놓아 주세요`, { flow:true });
+      uploadProgress(`관리자가 칸을 바꿔서 사진 ${moved}장을 보관함으로 옮겼어요 — 내 사진에서 골라 칸에 넣어 주세요`, { flow:true });
     }
   }
 }
@@ -1516,8 +1625,30 @@ function fitHQRail() {
   const rail = $("hqCards").querySelector(".hq-rail");
   const active = rail?.querySelector(".hq-summary.active");
   if (!active) return;
-  const style = getComputedStyle(rail);
-  rail.style.height = (active.getBoundingClientRect().height + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom)) + "px";
+  rail.style.height = "100%";
+  for (const slotRail of rail.querySelectorAll(".hq-slot-rail")) layoutHQSlotPages(slotRail);
+}
+function layoutHQSlotPages(rail) {
+  const cells = rail._cells;
+  if (!cells || !rail.clientWidth || !rail.clientHeight) return;
+  const minimum = window.innerHeight > 700 ? 150 : 120;
+  const rows = Math.max(1, Math.floor((rail.clientHeight + 8) / (minimum + 18 + 8)));
+  const tile = Math.min((rail.clientWidth - 10) / 2, (rail.clientHeight - (rows - 1) * 8) / rows - 18);
+  rail.style.setProperty("--hq-tile", `${Math.max(1, tile)}px`);
+  if (rail._rows === rows) return;
+  const previousPage = Math.round(rail.scrollLeft / Math.max(1, rail.clientWidth));
+  rail._rows = rows;
+  rail.replaceChildren();
+  const count = Math.max(1, Math.ceil(cells.length / (rows * 2)));
+  for (let i = 0; i < count; i++) {
+    const page = document.createElement("div"); page.className = "hq-slot-page";
+    page.append(...cells.slice(i * rows * 2, (i + 1) * rows * 2)); rail.appendChild(page);
+  }
+  const dots = rail.nextElementSibling;
+  dots.replaceChildren();
+  for (let i = 0; i < count; i++) dots.appendChild(document.createElement("i"));
+  rail.scrollLeft = Math.min(previousPage, count - 1) * rail.clientWidth;
+  rail.onscroll();
 }
 const hqCardSize = typeof ResizeObserver === "function" ? new ResizeObserver(fitHQRail) : null;
 window.addEventListener("resize", fitHQRail);
@@ -1527,13 +1658,13 @@ function renderHQ() {
   hqCardSize?.disconnect();
   const root = $("hqCards"), scroll = root.querySelector(".hq-rail")?.scrollLeft || 0;
   const slotScroll = root.querySelector(".hq-summary.active .hq-slot-rail")?.scrollLeft || 0;
-  const vaultScroll = root.querySelector(".vault-rail")?.scrollLeft || 0;
   root.textContent = "";
   const visible = hqProjects.filter(p => p.state === "open" || p.state === "paused");
   root.hidden = !standalone || !storeSel.value || !visible.length;
   if (root.hidden) {
     document.body.classList.remove("hq-expanded");
     $("logDockBtn").hidden = true;
+    $("albumDock").hidden = false; $("myPhotosDock").hidden = true; closeMyPhotos(false);
     $("dock").hidden = false; $("groups").hidden = false; $("newProj").hidden = false;
     return;
   }
@@ -1542,6 +1673,8 @@ function renderHQ() {
   if (expanded && !document.body.classList.contains("hq-expanded")) sel.clear();
   document.body.classList.toggle("hq-expanded", expanded);
   $("logDockBtn").hidden = !expanded;
+  $("albumDock").hidden = expanded; $("myPhotosDock").hidden = !expanded;
+  if (!expanded) closeMyPhotos(false);
   $("dock").hidden = false; $("groups").hidden = expanded; $("newProj").hidden = expanded;
   $("toolbar").hidden = expanded || !photos.some(p => !p.hq);
   const rail = document.createElement("div"); rail.className = "hq-rail";
@@ -1595,15 +1728,17 @@ function renderHQ() {
         const locals = localHQ(project);
         for (const item of project.items || []) if (!locals.some(p => same(p.hq.replaceItemId, item.id))) slotRail.appendChild(hqTile(project, item));
         for (const p of locals) slotRail.appendChild(hqTile(project, p));
-        const add = document.createElement("button"); add.className = "chip"; add.textContent = "사진 추가";
-        add.onclick = () => chooseHQSlot(project, null, null); slotRail.appendChild(add);
+        const cell = document.createElement("div"); cell.className = "hq-cell";
+        const add = document.createElement("button"); add.type = "button"; add.className = "hq-tile empty"; add.textContent = "+";
+        const caption = document.createElement("span"); caption.className = "hq-caption"; caption.textContent = "사진 추가";
+        add.setAttribute("aria-label", "사진 추가"); add.onclick = () => chooseHQSlot(project, null, null);
+        cell.append(add, caption); slotRail.appendChild(cell);
       }
       box.appendChild(slotRail);
-      const pages = Math.max(1, Math.ceil(slotRail.children.length / 3));
+      slotRail._cells = [...slotRail.children];
       const dots = document.createElement("div"); dots.className = "page-dots";
-      for (let i = 0; i < pages; i++) { const dot = document.createElement("i"); if (!i) dot.className = "active"; dots.appendChild(dot); }
       slotRail.onscroll = () => {
-        const page = Math.min(pages - 1, Math.round(slotRail.scrollLeft / Math.max(1, slotRail.clientWidth)));
+        const page = Math.min(dots.children.length - 1, Math.round(slotRail.scrollLeft / Math.max(1, slotRail.clientWidth)));
         dots.querySelectorAll("i").forEach((dot, i) => dot.classList.toggle("active", i === page));
       };
       box.appendChild(dots);
@@ -1627,6 +1762,7 @@ function renderHQ() {
     fitHQRail();
     const activeCard = rail.querySelector(".hq-summary.active");
     if (activeCard) hqCardSize?.observe(activeCard);
+    for (const slotRail of rail.querySelectorAll(".hq-slot-rail")) hqCardSize?.observe(slotRail);
   }
   rail.scrollLeft = scroll;
   const activeSlotRail = rail.querySelector(".hq-summary.active .hq-slot-rail");
@@ -1640,48 +1776,7 @@ function renderHQ() {
         if (!same(selectedHQ, visible[page].id)) { selectedHQ = visible[page].id; renderHQ(); }
       }, 160);
     };
-    const vault = document.createElement("section"); vault.className = "vault-area";
-    const vaultHead = document.createElement("div"); vaultHead.className = "section-head";
-    const vaultTitle = document.createElement("span"); vaultTitle.textContent = "내 보관함 · 아직 안 보냄";
-    const personal = photos.filter(p => !p.hq).sort((a,b) => b.ts - a.ts);
-    const vaultCount = document.createElement("small");
-    vaultHead.append(vaultTitle, vaultCount);
-    const unsaved = personal.filter(p => !p.saved && !p.broken).length;
-    const chosen = personal.filter(p => sel.has(p.id));
-    if (chosen.length) {
-      const actions = document.createElement("div"); actions.className = "vault-actions";
-      const count = document.createElement("span"); count.textContent = `${chosen.length}장 선택 ·`;
-      actions.appendChild(count);
-      for (const [label, action] of [["사진첩에 저장", () => $("saveBtn").onclick()],
-        ["지우기", () => $("delBtn").onclick()], ["해제", () => { sel.clear(); render(); }]]) {
-        const button = document.createElement("button"); button.type = "button";
-        button.textContent = label; button.onclick = action; actions.appendChild(button);
-      }
-      vaultHead.replaceChildren(actions);
-    }
-    vault.appendChild(vaultHead);
-    const vaultRail = document.createElement("div"); vaultRail.className = "vault-rail";
-    const pages = Math.max(1, Math.ceil(personal.length / 6));
-    for (let page = 0; page < pages; page++) {
-      const panel = document.createElement("div"); panel.className = "vault-page";
-      const items = personal.slice(page * 6, page * 6 + 6);
-      if (!items.length) { const empty = document.createElement("div"); empty.className = "vault-empty"; empty.textContent = "바로 찍은 사진이 여기에 쌓여요 · 꾹 눌러 위 칸으로 끌어 놓아요"; panel.appendChild(empty); }
-      for (const p of items) { const thumb = thumbEl(p); installVaultDrag(thumb, p); panel.appendChild(thumb); }
-      vaultRail.appendChild(panel);
-    }
-    vault.appendChild(vaultRail);
-    const dots = document.createElement("div"); dots.className = "page-dots"; dots.setAttribute("aria-label", "보관함 " + pages + "쪽");
-    for (let i = 0; i < pages; i++) { const dot = document.createElement("i"); if (!i) dot.className = "active"; dots.appendChild(dot); }
-    vaultRail.onscroll = () => {
-      const page = Math.min(pages - 1, Math.round(vaultRail.scrollLeft / Math.max(1, vaultRail.clientWidth)));
-      dots.querySelectorAll("i").forEach((dot,i) => dot.classList.toggle("active", i === page));
-      vaultCount.textContent = personal.length + "장 · " + (unsaved ? "미저장 " + unsaved + "장 · " : "") + (page + 1) + "/" + pages + "쪽";
-    };
-    vault.appendChild(dots);
-    const hint = document.createElement("div"); hint.className = "vault-hint";
-    hint.textContent = "보관함 사진은 이 폰에만 있어요 · 앱을 지우면 함께 지워져요";
-    vault.appendChild(hint); root.appendChild(vault);
-    vaultRail.scrollLeft = vaultScroll; vaultRail.onscroll();
+
   }
 }
 function hqTile(project, item, slot) {
@@ -1853,10 +1948,17 @@ function chooseHQSlot(project, slot, replacement = null, previous = null, mode =
   hqSlotChoice = { project, slot, replacement, previous };
   if (mode) { $(mode === "camera" ? "hqSlotCamera" : "hqSlotAlbum").click(); return; }
   $("hqPickTitle").textContent = slot?.name || "사진 채우기";
+  $("hqPickVault").hidden = !slot || !photos.some(p => !p.hq && !p.broken && p.blob instanceof Blob);
   $("hqPick").hidden = false;
 }
 $("hqPickCamera").onclick = () => { $("hqPick").hidden = true; $("hqSlotCamera").click(); };
 $("hqPickAlbum").onclick = () => { $("hqPick").hidden = true; $("hqSlotAlbum").click(); };
+$("hqPickVault").onclick = () => {
+  const choice = hqSlotChoice;
+  if (!choice?.slot) return;
+  $("hqPick").hidden = true; hqSlotChoice = null;
+  openMyPhotos({ _hqProject:choice.project, _hqSlot:choice.slot, _hqItem:choice.previous || choice.replacement });
+};
 $("hqPickCancel").onclick = () => { $("hqPick").hidden = true; hqSlotChoice = null; };
 $("hqPick").onclick = e => { if (e.target === $("hqPick")) $("hqPickCancel").click(); };
 async function removeHQPhoto(p) {
