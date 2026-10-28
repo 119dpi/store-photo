@@ -100,10 +100,15 @@ svg { display: block; }
 @media (min-width: 560px) { .grid { grid-template-columns: repeat(4, 1fr); } }
 .thumb { position: relative; aspect-ratio: 1; background: var(--panel); overflow: hidden; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s, opacity .15s; pointer-events: none; }
-.thumb .tick { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.9), 0 0 0 1px rgba(0,0,0,.25);
-  background: rgba(0,0,0,.15); display: grid; place-items: center; color: #000; }
-.thumb .tick svg { width: 13px; height: 13px; opacity: 0; }
-.thumb.sel .tick { background: var(--stamp); box-shadow: 0 0 0 2px #000; } .thumb.sel .tick svg { opacity: 1; }
+.grid, .grid *, .grid button { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+.photo-check { position:absolute; top:0; right:0; width:44px; height:44px; display:grid; place-items:center; z-index:2; }
+.photo-check .tick { width:22px; height:22px; border-radius:50%; box-shadow:inset 0 0 0 2px rgba(255,255,255,.9), 0 0 0 1px #0004; background:#0004; display:grid; place-items:center; color:#000; }
+.photo-check .tick svg { width:13px; height:13px; opacity:0; }
+.sel .photo-check .tick { background:var(--stamp); box-shadow:0 0 0 2px #000; }
+.sel .photo-check .tick svg { opacity:1; }
+.photo-preview { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:44px; height:44px; display:grid; place-items:center; z-index:1; }
+.photo-preview span { width:40px; height:40px; border-radius:50%; background:rgba(0,0,0,.4); display:grid; place-items:center; color:#fff; }
+.photo-preview svg { width:22px; height:22px; }
 .thumb.sel img { transform: scale(.9); border-radius: 8px; }
 .thumb .saved { position: absolute; left: 6px; bottom: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.6); color: var(--ok); }
 .thumb.pending img { opacity: .4; }
@@ -183,8 +188,8 @@ svg { display: block; }
 .viewer { position: fixed; inset: 0; z-index: 35; background: #000; display: grid; grid-template-rows: auto 1fr auto; }
 .viewer .vtop { padding: calc(var(--st) + 10px) var(--gutter-r) 10px var(--gutter); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .viewer .vname { font-size: .85em; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.viewer .vimg { min-height: 0; display: grid; place-items: center; }
-.viewer .vimg img { max-width: 100%; max-height: 100%; object-fit: contain; -webkit-touch-callout: default; }
+.viewer .vimg { min-height:0; min-width:0; overflow:hidden; display:grid; place-items:center; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+.viewer .vimg img { max-width: 100%; max-height: 100%; object-fit: contain; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; pointer-events:none; transform-origin:center; }
 .viewer .vbot { padding: 12px var(--gutter-r) calc(var(--sb) + 14px) var(--gutter); display: flex; justify-content: space-between; align-items: center;
   font-family: var(--mono); font-size: .82em; color: var(--muted); gap: 10px; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--dock-h) + 8px); transform: translateX(-50%); z-index: 50;
@@ -354,8 +359,8 @@ body:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) 
 <div class="viewer" id="viewer" hidden>
   <div class="vtop"><span class="vname" id="vName"></span>
     <button class="cam-x" id="vClose" type="button" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-  <div class="vimg"><img id="vImg" alt=""></div>
-  <div class="vbot"><span id="vInfo"></span><button class="chip" id="vSave" type="button">이 사진 저장</button></div>
+  <div class="vimg"><img id="vImg" alt="" draggable="false"></div>
+  <div class="vbot"><button class="chip" id="vPrev" type="button" aria-label="이전 사진">‹</button><span id="vInfo"></span><button class="chip" id="vNext" type="button" aria-label="다음 사진">›</button><button class="chip" id="vSave" type="button">이 사진 저장</button></div>
 </div>
 
 <div class="scrim" id="sheet" hidden>
@@ -404,15 +409,15 @@ body:has(.upload-strip:not([hidden])) .main { padding-bottom:calc(var(--dock-h) 
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION = "2026-10-28.2"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.3"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
 "김정훈 권역":["EM가든5점","EM경기광주점","EM구로점","EM남양주점","EM다산점","EM명일점","EM목동점","EM별내점","EM여주점","EM용산점","EM이천점","EM자양점","EM창동점","EM청계천점","EM춘천점","EM하남점"],
 "김종권 권역":["EM광산점","EM구미점","EM금정점","EM마산점","EM문현점","EM봉선점","EM사상점","EM서귀포점","EM성서점","EM순천점","EM양산점","EM여수점","EM연제점","EM울산점","EM칠성점","EM통영점","EM포항점"]};
 
-// Output: long edge 3024px at JPEG quality 0.88; thumbnails 360px for the list
-const MAX_EDGE = 3024, QUALITY = 0.88, THUMB = 360;
+// Output: long edge 2048px at JPEG quality 0.88; thumbnails 360px for the list
+const MAX_EDGE = 2048, QUALITY = 0.88, THUMB = 360;
 const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
 const CAMPLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>';
 const WEEK = ["일","월","화","수","목","금","토"];
@@ -669,7 +674,7 @@ function render() {
   $("toolbar").hidden = !has; $("newProj").hidden = false;
   const todayN = photos.filter(p => projects.find(x => x.id === p.projectId)?.day === t).length;
   $("heroTitle").innerHTML = todayN ? `오늘 ${todayN}장 찍었어요` : "매장 사진 촬영";
-  $("heroSub").textContent = has ? "사진을 누르면 선택, 길게 누르면 크게 보여요." : "가운데 버튼을 누르면 카메라가 열리고, 여러 장을 이어서 찍을 수 있어요.";
+  $("heroSub").textContent = has ? "오른쪽 위 원으로 선택하고, 돋보기로 크게 확인해요." : "가운데 버튼을 누르면 카메라가 열리고, 여러 장을 이어서 찍을 수 있어요.";
 
   if (!has) {
     g.innerHTML = `<div class="emptylist"><ol>
@@ -713,17 +718,13 @@ function render() {
 function thumbEl(p) {
   const el = document.createElement("div");
   el.className = "thumb" + (sel.has(p.id) ? " sel" : "");
-  el.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="tick">${CHECK}</span>${p.saved ? '<span class="saved">저장됨</span>' : ""}`;
+  el.innerHTML = `<img alt="" loading="lazy" decoding="async" draggable="false">${p.saved ? '<span class="saved">저장됨</span>' : ""}`;
   el.querySelector("img").src = thumbURL(p);
   if (p.sent || p.sendError || p.paused) {
     const badge = document.createElement("span"); badge.className = "saved sent" + (p.sendError ? " send-error" : "");
     badge.textContent = p.paused ? "대기 중" : p.sendError ? "못 보냄" : "전송됨"; el.appendChild(badge);
   }
-  let timer, long = false;
-  el.onpointerdown = () => { long = false; timer = setTimeout(() => { long = true; openViewer(p); }, 450); };
-  el.onpointerup = el.onpointerleave = el.onpointercancel = () => clearTimeout(timer);
-  el.onclick = () => { if (long) return; if (p.sendError) toast(p.sendError); sel.has(p.id) ? sel.delete(p.id) : sel.add(p.id); render(); };
-  el.oncontextmenu = e => e.preventDefault();
+  photoControls(el, p, () => photos.filter(x => x.projectId === p.projectId).sort((a,b) => a.ts-b.ts));
   return el;
 }
 function updateCounts() {
@@ -760,7 +761,7 @@ $("saveBtn").onclick = async () => {
   const list = photos.filter(p => sel.has(p.id)).sort((a, b) => a.ts - b.ts);
   if (!list.length) return;
   try { await saveList(list); toast(`${list.length}장 저장했어요`); sel.clear(); render(); }
-  catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 사진을 길게 눌러 저장해 주세요."); }
+  catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 다시 시도해 주세요."); }
 };
 
 /* ---------- Delete ---------- */
@@ -781,15 +782,77 @@ $("sheetYes").onclick = async () => {
 };
 
 /* ---------- Viewer ---------- */
-let viewing = null, viewURL = null;
-function openViewer(p) {
-  viewing = p; viewURL = URL.createObjectURL(p.blob);
-  $("vImg").src = viewURL; $("vName").textContent = fileName(p);
-  $("vInfo").textContent = `${p.w}×${p.h} · ${fmtSize(p.blob.size)}`; $("viewer").hidden = false;
+const remoteSelection = new Set();
+const MAGNIFY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg>';
+function localOriginal(item) { return item.blob ? item : photos.find(p => p.id === item.uid); }
+function photoControls(el, item, group) {
+  const local = localOriginal(item), selection = local ? sel : remoteSelection;
+  const key = local ? local.id : `remote:${item.id ?? item.uid ?? item.thumb_url}`;
+  el.classList.toggle("sel", selection.has(key));
+  const check = document.createElement("button"); check.type = "button"; check.className = "photo-check";
+  check.setAttribute("aria-label", "사진 선택"); check.setAttribute("aria-pressed", String(selection.has(key))); check.innerHTML = `<span class="tick">${CHECK}</span>`;
+  check.onclick = e => { e.stopPropagation(); selection.has(key) ? selection.delete(key) : selection.add(key); render(); };
+  const preview = document.createElement("button"); preview.type = "button"; preview.className = "photo-preview";
+  preview.setAttribute("aria-label", "사진 크게 보기"); preview.innerHTML = `<span>${MAGNIFY}</span>`;
+  preview.onclick = e => { e.stopPropagation(); openViewer(item, group()); };
+  el.append(check, preview);
 }
-$("vClose").onclick = () => { $("viewer").hidden = true; URL.revokeObjectURL(viewURL); viewing = null; };
+document.addEventListener("contextmenu", e => { if (e.target.closest(".grid")) e.preventDefault(); });
+let viewing = null, viewURL = null, viewItems = [], viewIndex = 0;
+let viewScale = 1, viewX = 0, viewY = 0;
+const viewArea = $("vImg").parentElement, viewPointers = new Map();
+function viewTransform() { $("vImg").style.transform = `translate(${viewX}px,${viewY}px) scale(${viewScale})`; }
+function resetView() { viewScale = 1; viewX = viewY = 0; viewTransform(); }
+function openViewer(p, list = [p]) {
+  if (viewURL) URL.revokeObjectURL(viewURL);
+  viewItems = list; viewIndex = Math.max(0, list.indexOf(p)); viewing = localOriginal(p) || null;
+  viewURL = viewing ? URL.createObjectURL(viewing.blob) : null;
+  $("vImg").src = viewURL || new URL(p.thumb_url, SERVER).href;
+  $("vName").textContent = viewing ? fileName(viewing) : "본사 취합 · 썸네일";
+  $("vInfo").textContent = `${viewIndex + 1}/${list.length} · ` + (viewing ? `${viewing.w}×${viewing.h} · ${fmtSize(viewing.blob.size)}` : "썸네일 미리보기");
+  $("vSave").hidden = !viewing; $("vPrev").disabled = viewIndex === 0; $("vNext").disabled = viewIndex === list.length - 1;
+  resetView(); $("viewer").hidden = false;
+}
+function stepView(delta) { const next = viewIndex + delta; if (next >= 0 && next < viewItems.length) openViewer(viewItems[next], viewItems); }
+$("vPrev").onclick = () => stepView(-1); $("vNext").onclick = () => stepView(1);
+$("vClose").onclick = () => { $("viewer").hidden = true; if (viewURL) URL.revokeObjectURL(viewURL); viewURL = null; viewing = null; viewItems = []; viewPointers.clear(); };
+let viewGesture = null, lastTap = null;
+viewArea.oncontextmenu = e => e.preventDefault();
+viewArea.onpointerdown = e => {
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  viewArea.setPointerCapture(e.pointerId); viewPointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  const points = [...viewPointers.values()];
+  viewGesture = { x:e.clientX, y:e.clientY, at:Date.now(), scale:viewScale, panX:viewX, panY:viewY, multi:points.length > 1,
+    distance:points.length > 1 ? Math.hypot(points[0].x-points[1].x, points[0].y-points[1].y) : 0 };
+};
+viewArea.onpointermove = e => {
+  if (!viewPointers.has(e.pointerId) || !viewGesture) return;
+  viewPointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  const points = [...viewPointers.values()];
+  if (points.length > 1 && viewGesture.distance) {
+    viewScale = Math.max(1, Math.min(5, viewGesture.scale * Math.hypot(points[0].x-points[1].x, points[0].y-points[1].y) / viewGesture.distance));
+  } else if (viewScale > 1 && !viewGesture.multi) {
+    viewX = viewGesture.panX + e.clientX-viewGesture.x; viewY = viewGesture.panY + e.clientY-viewGesture.y;
+  }
+  if (viewScale === 1) viewX = viewY = 0;
+  viewTransform();
+};
+viewArea.onpointerup = e => {
+  const gesture = viewGesture;
+  viewPointers.delete(e.pointerId);
+  if (!gesture || gesture.multi) { if (!viewPointers.size) viewGesture = null; return; }
+  const dx = e.clientX-gesture.x, dy = e.clientY-gesture.y, now = Date.now();
+  if (viewScale === 1 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)*1.5) { stepView(dx < 0 ? 1 : -1); lastTap = null; }
+  else if (Math.hypot(dx,dy) < 12 && now-gesture.at < 300) {
+    if (lastTap && now-lastTap.at < 350 && Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y) < 30) {
+      viewScale === 1 ? (viewScale = 2.5) : resetView(); viewTransform(); lastTap = null;
+    } else lastTap = { at:now, x:e.clientX, y:e.clientY };
+  } else lastTap = null;
+  viewGesture = null;
+};
+viewArea.onpointercancel = e => { viewPointers.delete(e.pointerId); viewGesture = null; lastTap = null; };
 $("vSave").onclick = async () => {
-  try { await saveList([viewing]); toast("저장했어요"); render(); } catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 사진을 길게 눌러 저장해 주세요."); }
+  try { await saveList([viewing]); toast("저장했어요"); render(); } catch (e) { if (e?.name !== "AbortError") toast("저장하지 못했어요. 다시 시도해 주세요."); }
 };
 
 /* ---------- Album import ---------- */
@@ -1066,6 +1129,19 @@ function hqTile(project, item, slot) {
   caption.textContent = [slot?.name, item?.paused ? "대기 중" : item?.sendError ? "못 보냄" : local ? (item.sent ? "전송됨" : "보내는 중") : requested ? `수정요청 · ${item.request_note || "사진을 교체해 주세요"}` : ""].filter(Boolean).join(" · ");
   el.appendChild(caption); el.setAttribute("aria-label", caption.textContent || "올린 사진");
   el.oncontextmenu = e => e.preventDefault();
+  if (item) {
+    el.removeAttribute("role"); el.removeAttribute("tabindex");
+    photoControls(el, item, () => {
+      if (project.preset?.length) return project.preset.filter(s => s.group === slot?.group).map(s => slotPhoto(project, s.key)).filter(Boolean);
+      const locals = localHQ(project);
+      return [...(project.items || []).filter(i => !locals.some(p => same(p.hq.replaceItemId, i.id))), ...locals];
+    });
+    if (requested) {
+      const replace = document.createElement("button"); replace.type = "button"; replace.className = "hq-caption"; replace.style.pointerEvents = "auto"; replace.textContent = "교체 촬영";
+      replace.onclick = e => { e.stopPropagation(); beginHQ(project, slot, item); }; el.appendChild(replace);
+    }
+    return el;
+  }
   el.onclick = () => {
     if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
     if (item?.sendError) return toast(item.sendError);
