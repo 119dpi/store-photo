@@ -56,6 +56,9 @@ svg { display: block; }
 .store-pill span { overflow: hidden; text-overflow: ellipsis; }
 .store-pill.unset { color: var(--stamp); box-shadow: inset 0 0 0 1px var(--stamp); background: transparent; }
 .store-pill svg { flex: none; width: 14px; height: 14px; opacity: .7; }
+.top-actions { display:flex; align-items:center; gap:8px; }
+.settings-btn { flex:none; width:38px; height:38px; border-radius:12px; background:var(--panel-2); display:grid; place-items:center; }
+.settings-btn svg { width:19px; height:19px; }
 
 /* Main */
 .main { max-width: 760px; margin: 0 auto; padding: 22px var(--gutter-r) calc(var(--dock-h) + 28px) var(--gutter); display: grid; gap: 22px; }
@@ -187,17 +190,38 @@ svg { display: block; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--dock-h) + 8px); transform: translateX(-50%); z-index: 50;
   background: var(--panel-3); color: var(--fg); padding: 10px 16px; border-radius: 999px; font-size: .88em; white-space: nowrap; box-shadow: 0 6px 24px rgba(0,0,0,.6); }
 @media (prefers-reduced-motion: reduce) { .thumb img { transition: none; } }
+/* Headquarters collection */
+.hq-list, .hq-card { display:grid; gap:12px; }
+.hq-card { background:var(--panel); border-radius:18px; padding:16px; }
+.hq-card h2, .hq-card h3 { margin:0; font-size:1.05em; }
+.hq-card h3 { font-size:.88em; color:var(--muted); }
+.hq-meta, .hq-hint, .hq-progress { color:var(--muted); font-size:.82em; margin:0; }
+.hq-progress { color:var(--stamp); }
+.hq-tile { position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--panel-3) center/cover; display:flex; flex-direction:column; justify-content:end; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; cursor:pointer; }
+.hq-tile.empty { align-items:center; justify-content:center; gap:8px; padding:8px; text-align:center; color:var(--muted); }
+.hq-tile svg { width:26px; height:26px; }
+.hq-tile.requested, .hq-tile.error { box-shadow:inset 0 0 0 2px var(--err); }
+.hq-caption { padding:5px 7px; background:rgba(0,0,0,.75); font-size:.72em; overflow-wrap:anywhere; pointer-events:none; }
+.hq-tile.requested .hq-caption, .hq-tile.error .hq-caption, .thumb .send-error { color:var(--err); }
+.thumb .sent { bottom:auto; top:6px; color:var(--stamp); }
+#hqConfirm .confirm { background:var(--stamp); color:#000; }
+#camSlot { position:absolute; top:8px; left:12px; right:12px; text-align:center; color:var(--stamp); background:rgba(0,0,0,.65); border-radius:10px; padding:6px; pointer-events:none; }
 </style>
 </head>
 <body>
 
 <header class="top">
   <img class="logo" src="logo.png" alt="A STORE">
-  <label class="store">
-    <select id="store" aria-label="점포 선택"><option value="">점포 선택</option></select>
-    <span class="store-pill unset" id="storePill"><span id="storeName">점포 선택</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></span>
-  </label>
+  <div class="top-actions">
+    <label class="store">
+      <select id="store" aria-label="점포 선택"><option value="">점포 선택</option></select>
+      <span class="store-pill unset" id="storePill"><span id="storeName">점포 선택</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></span>
+    </label>
+    <button class="settings-btn" id="settingsBtn" type="button" aria-label="설정">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 15 .1.1a1.8 1.8 0 0 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 0 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 0 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3h-.2a1.8 1.8 0 0 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 0 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 0 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 0 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 0 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"/></svg>
+    </button>
+  </div>
 </header>
 
 <main class="main">
@@ -206,6 +230,9 @@ svg { display: block; }
     <h1 id="heroTitle">매장 사진을<br>찍어 주세요</h1>
     <p id="heroSub">가운데 버튼을 누르면 카메라가 열리고, 여러 장을 이어서 찍을 수 있어요.</p>
   </section>
+
+  <div id="hqProgress" class="hq-progress" role="status" hidden></div>
+  <div id="hqCards" class="hq-list" hidden></div>
 
   <div class="toolbar" id="toolbar" hidden>
     <span class="count" id="selCount"></span>
@@ -220,6 +247,7 @@ svg { display: block; }
   </button>
 
   <div class="groups" id="groups"></div>
+  <p id="hqHint" class="hq-hint" hidden>홈 화면에 추가하면 본사 취합을 쓸 수 있어요</p>
 </main>
 
 <nav class="dock">
@@ -244,6 +272,7 @@ svg { display: block; }
   </div>
   <div class="viewport" id="viewport">
     <video id="video" playsinline muted autoplay></video>
+    <div id="camSlot" hidden></div>
     <div class="flash" id="flash"></div>
     <div class="cam-msg" id="camMsg" hidden></div>
     <div class="res" id="res"></div>
@@ -269,14 +298,34 @@ svg { display: block; }
 <div class="scrim" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true">
     <h2 id="sheetTitle"></h2>
-    <p>삭제한 사진은 되돌릴 수 없어요. 사진 앱에 이미 저장한 사진은 그대로 남아요.</p>
+    <p id="deleteNote">삭제한 사진은 되돌릴 수 없어요. 사진 앱에 이미 저장한 사진은 그대로 남아요.</p>
     <div class="btns"><button type="button" id="sheetNo">취소</button><button type="button" class="del" id="sheetYes">삭제</button></div>
   </div>
 </div>
 
+<div class="scrim" id="settingsSheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <h2 id="settingsTitle">설정</h2>
+    <p>Hub 관리자 계정으로 로그인해요. 매장 직원은 쓸 일이 없어요.</p>
+    <div class="btns"><button type="button" id="appInfoBtn">앱 정보</button><button type="button" class="del" id="adminPageBtn">관리자 페이지 열기</button></div>
+    <button class="chip" id="settingsClose" type="button">닫기</button>
+  </div>
+</div>
+
+<div class="scrim" id="hqConfirm" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hqConfirmTitle">
+  <h2 id="hqConfirmTitle"></h2><p>다른 점포를 고르면 그 점포 사진이 돼요</p>
+  <div class="btns"><button id="hqNo" type="button">취소</button><button id="hqYes" class="confirm" type="button">보내기</button></div>
+</div></div>
+<div class="scrim" id="hqFinish" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hqFinishTitle">
+  <h2 id="hqFinishTitle">촬영을 마쳤어요</h2><p>완료를 눌러 방금 찍은 사진을 사진첩에도 저장해 주세요.</p>
+  <div class="btns"><button id="hqFinishNo" type="button">닫기</button><button id="hqFinishYes" type="button">완료</button></div>
+</div></div>
+<input type="file" id="hqLib" accept="image/*" multiple>
 <div class="toast" id="toast" hidden></div>
 
 <script>
+const SERVER = "https://astorehub-1.tail73148e.ts.net";
+const APP_VERSION_DATE = "2026.10.28";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
 "김정훈 권역":["EM가든5점","EM경기광주점","EM구로점","EM남양주점","EM다산점","EM명일점","EM목동점","EM별내점","EM여주점","EM용산점","EM이천점","EM자양점","EM창동점","EM청계천점","EM춘천점","EM하남점"],
@@ -289,6 +338,11 @@ const CAMPLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const WEEK = ["일","월","화","수","목","금","토"];
 
 const $ = id => document.getElementById(id);
+$("settingsBtn").onclick = () => { $("settingsSheet").hidden = false; };
+$ ("settingsClose").onclick = () => { $("settingsSheet").hidden = true; };
+$ ("settingsSheet").onclick = e => { if (e.target === $("settingsSheet")) $("settingsSheet").hidden = true; };
+$ ("appInfoBtn").onclick = () => toast(`앱 정보 · ${APP_VERSION_DATE}`);
+$ ("adminPageBtn").onclick = () => window.open(SERVER + "/admin/store-photo", "_blank");
 const pad = n => String(n).padStart(2, "0");
 const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + "MB" : Math.round(b / 1024) + "KB";
 const ymd = d => `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
@@ -334,14 +388,27 @@ const urls = new Map();   // photo id -> thumb object URL
 const thumbURL = p => { if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(p.thumb)); return urls.get(p.id); };
 
 const storeSel = $("store");
-for (const [g, names] of Object.entries(STORES)) {
-  const og = document.createElement("optgroup"); og.label = g;
-  for (const n of names) { const o = document.createElement("option"); o.value = o.textContent = n; og.appendChild(o); }
-  storeSel.appendChild(og);
+let hubStores = [];
+try { hubStores = JSON.parse(ls.get("hqStores") || "[]"); if (!Array.isArray(hubStores) || hubStores.some(x => !x || !x.name || x.store_id == null)) hubStores = []; } catch {}
+function populateStores() {
+  const selected = storeSel.value || ls.get("store") || "";
+  storeSel.length = 1;
+  const groups = {};
+  if (hubStores.length) for (const st of hubStores) {
+    const group = Object.keys(STORES).find(g => STORES[g].includes(st.name)) || st.region || st.category || "점포";
+    (groups[group] ||= []).push(st.name);
+  }
+  else Object.assign(groups, STORES);
+  for (const [g, names] of Object.entries(groups)) {
+    const og = document.createElement("optgroup"); og.label = g;
+    for (const n of names) { const o = document.createElement("option"); o.value = o.textContent = n; og.appendChild(o); }
+    storeSel.appendChild(og);
+  }
+  storeSel.value = selected; syncStore();
 }
 function syncStore() { $("storeName").textContent = storeSel.value || "점포 선택"; $("storePill").classList.toggle("unset", !storeSel.value); }
-storeSel.value = ls.get("store") || ""; syncStore();
-storeSel.onchange = () => { ls.set("store", storeSel.value); syncStore(); render(); };
+populateStores();
+storeSel.onchange = () => { ls.set("store", storeSel.value); syncStore(); hqProjects = []; render(); refreshHQ(); };
 $("today").textContent = ymd(new Date());
 
 const defaultName = p => p.store || storeSel.value || "프로젝트";
@@ -354,7 +421,7 @@ async function newProject() {
 // Camera shoots into the latest project from today, or a new one
 async function currentProject() {
   const t = todayKey();
-  const today = projects.filter(p => p.day === t).sort((a, b) => b.ts - a.ts)[0];
+  const today = projects.filter(p => p.day === t && !p.hqProjectId).sort((a, b) => b.ts - a.ts)[0];
   return today || newProject();
 }
 
@@ -409,7 +476,7 @@ function resize(src, sw, sh, w, h) {
 const toBlob = (c, q) => new Promise(r => c.toBlob(r, "image/jpeg", q));
 
 // src: image or canvas; returns stored photo record
-async function makePhoto(src, sw, sh, taken, before, project) {
+async function makePhoto(src, sw, sh, taken, before, project, hq = null) {
   const s = Math.min(1, MAX_EDGE / Math.max(sw, sh));
   const w = Math.round(sw * s), h = Math.round(sh * s);
   const c = resize(src, sw, sh, w, h);
@@ -423,13 +490,15 @@ async function makePhoto(src, sw, sh, taken, before, project) {
   const thumb = await toBlob(tc, 0.78);
   c.width = c.height = 0; tc.width = tc.height = 0;
   const p = { id: uid(), projectId: project.id, blob, thumb, w, h, before: before || 0, taken: taken.getTime(), ts: Date.now(), saved: false, store: storeSel.value };
+  if (hq) { p.hq = { ...hq }; p.sent = false; p.store = hq.storeName; }
   photos.push(p); await put("photos", p);
+  if (hq) { renderHQ(); sendHQ(); }
   return p;
 }
-async function photoFromFile(file, project, fromCamera) {
+async function photoFromFile(file, project, fromCamera, hq = null) {
   const taken = (fromCamera ? null : await exifDate(file)) || (fromCamera ? new Date() : new Date(file.lastModified || Date.now()));
   const img = await loadImage(file);
-  return makePhoto(img, img.naturalWidth, img.naturalHeight, taken, file.size, project);
+  return makePhoto(img, img.naturalWidth, img.naturalHeight, taken, file.size, project, hq);
 }
 function fileName(p) {
   const pr = projects.find(x => x.id === p.projectId), d = new Date(p.taken);
@@ -469,6 +538,7 @@ function render() {
         <button class="gadd" type="button" aria-label="이 프로젝트에 이어서 촬영">${CAMPLUS}</button>
       </div><div class="gmeta">${ph.length}장 · ${fmtSize(ph.reduce((a, p) => a + p.blob.size, 0))}</div><div class="grid"></div>`;
     const inp = sec.querySelector(".gname");
+    inp.readOnly = !!pr.hqProjectId;
     inp.value = pr.name; inp.placeholder = defaultName(pr);
     inp.onchange = async () => { pr.name = inp.value.trim(); await put("projects", pr); };
     inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); };
@@ -476,22 +546,33 @@ function render() {
       const allOn = ph.every(p => sel.has(p.id));
       ph.forEach(p => allOn ? sel.delete(p.id) : sel.add(p.id)); render();
     };
-    sec.querySelector(".gadd").onclick = () => openCamera(pr);
+    sec.querySelector(".gadd").onclick = () => {
+      if (!pr.hqProjectId) return openCamera(pr);
+      const remote = hqProjects.find(x => String(x.id) === String(pr.hqProjectId));
+      if (!remote || !standalone) return toast("열린 본사 취합 프로젝트에서 촬영해 주세요");
+      const slot = (remote.preset || []).find(x => !slotPhoto(remote, x.key));
+      if (remote.preset?.length && !slot) return toast("본사 확인 전엔 다시 못 올려요");
+      beginHQ(remote, slot);
+    };
     const grid = sec.querySelector(".grid");
     for (const p of ph) grid.appendChild(thumbEl(p));
     g.appendChild(sec);
   }
-  updateCounts();
+  updateCounts(); renderHQ();
 }
 function thumbEl(p) {
   const el = document.createElement("div");
   el.className = "thumb" + (sel.has(p.id) ? " sel" : "");
   el.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="tick">${CHECK}</span>${p.saved ? '<span class="saved">저장됨</span>' : ""}`;
   el.querySelector("img").src = thumbURL(p);
+  if (p.sent || p.sendError) {
+    const badge = document.createElement("span"); badge.className = "saved sent" + (p.sendError ? " send-error" : "");
+    badge.textContent = p.sendError ? "못 보냄" : "전송됨"; el.appendChild(badge);
+  }
   let timer, long = false;
   el.onpointerdown = () => { long = false; timer = setTimeout(() => { long = true; openViewer(p); }, 450); };
   el.onpointerup = el.onpointerleave = el.onpointercancel = () => clearTimeout(timer);
-  el.onclick = () => { if (long) return; sel.has(p.id) ? sel.delete(p.id) : sel.add(p.id); render(); };
+  el.onclick = () => { if (long) return; if (p.sendError) toast(p.sendError); sel.has(p.id) ? sel.delete(p.id) : sel.add(p.id); render(); };
   el.oncontextmenu = e => e.preventDefault();
   return el;
 }
@@ -528,14 +609,18 @@ $("saveBtn").onclick = async () => {
 };
 
 /* ---------- Delete ---------- */
-$("delBtn").onclick = () => { $("sheetTitle").textContent = `사진 ${sel.size}장을 삭제할까요?`; $("sheet").hidden = false; };
+$("delBtn").onclick = () => { $("sheetTitle").textContent = `사진 ${sel.size}장을 삭제할까요?`; const n = photos.filter(p => sel.has(p.id) && p.hq && !p.sent).length;
+  $("deleteNote").textContent = "삭제한 사진은 되돌릴 수 없어요. 사진 앱에 이미 저장한 사진은 그대로 남아요." + (n ? ` 본사로 아직 안 보낸 사진 ${n}장 포함` : "");
+  $("sheet").hidden = false; };
 $("sheetNo").onclick = () => $("sheet").hidden = true;
 $("sheet").onclick = e => { if (e.target === $("sheet")) $("sheet").hidden = true; };
 $("sheetYes").onclick = async () => {
   $("sheet").hidden = true;
   const ids = [...sel];
+  const deleting = new Set(ids);
+  photos = photos.filter(p => !deleting.has(p.id));
   for (const id of ids) { await del("photos", id); if (urls.has(id)) { URL.revokeObjectURL(urls.get(id)); urls.delete(id); } }
-  photos = photos.filter(p => !sel.has(p.id)); sel.clear();
+  ids.forEach(id => sel.delete(id));
   for (const pr of [...projects]) if (!photos.some(p => p.projectId === pr.id)) { await del("projects", pr.id); projects = projects.filter(x => x !== pr); }
   toast(`${ids.length}장 삭제했어요`); render();
 };
@@ -579,12 +664,15 @@ async function startStream() {
 }
 function stopStream() { stream?.getTracks().forEach(t => t.stop()); stream = null; video.srcObject = null; }
 
-async function openCamera(pr) {
+async function openCamera(pr, target = null) {
+  camHQ = target; sessionPhotos = []; $("camDone").disabled = false;
+  $("camProjName").readOnly = !!target;
   camProject = pr || await currentProject();
   sessionCount = 0; $("camCount").textContent = "0";
   $("tray").innerHTML = '<span class="hint">찍은 사진이 여기에 모여요</span>';
   $("camDate").textContent = prettyDay(camProject.day);
   $("camProjName").value = camProject.name; $("camProjName").placeholder = defaultName(camProject);
+  updateCamSlot(); cameraBusy();
   $("cam").hidden = false; document.body.style.overflow = "hidden";
   if (navigator.mediaDevices?.getUserMedia) await startStream();
   else { $("camMsg").innerHTML = `<div>이 브라우저는 연속 촬영을 지원하지 않아요.</div><label class="chip" for="nativeCam">기본 카메라로 찍기</label>`; $("camMsg").hidden = false; }
@@ -600,8 +688,12 @@ async function closeCamera() {
   defaultSelect(); render();
   if (sessionCount) toast(`${sessionCount}장 찍었어요 · 오늘 사진이 선택돼 있어요`);
 }
-$("camDone").onclick = closeCamera;
-$("camClose").onclick = closeCamera;
+$("camDone").onclick = () => {
+  if (camHQ && pending) return toast("마지막 사진 정리 중…");
+  if (camHQ && sessionPhotos.length) saveHQSession();
+  closeCamera();
+};
+$("camClose").onclick = () => { if (camHQ && pending) return toast("마지막 사진 정리 중…"); closeCamera(); };
 
 function addToTray(src) {
   const tray = $("tray"); tray.querySelector(".hint")?.remove();
@@ -622,7 +714,7 @@ function flyToTray(src, fromRect) {
 }
 
 $("snap").onclick = () => {
-  if (!stream || !video.videoWidth) return;
+  if (!stream || !video.videoWidth || (camHQ && pending)) return;
   const vw = video.videoWidth, vh = video.videoHeight, taken = new Date();
   const frame = document.createElement("canvas"); frame.width = vw; frame.height = vh;
   frame.getContext("2d").drawImage(video, 0, 0, vw, vh);
@@ -634,22 +726,220 @@ $("snap").onclick = () => {
   prev.getContext("2d").drawImage(frame, 0, 0, prev.width, prev.height);
   flyToTray(prev.toDataURL("image/jpeg", .7), rect);
   sessionCount++; $("camCount").textContent = sessionCount;
-  const pr = camProject; pending++;
-  queue = queue.then(() => makePhoto(frame, vw, vh, taken, 0, pr)).catch(() => toast("사진 한 장을 저장하지 못했어요")).finally(() => { frame.width = frame.height = 0; pending--; });
+  const pr = camProject, target = camHQ ? { ...camHQ } : null; pending++; cameraBusy();
+  queue = queue.then(async () => {
+    const p = await makePhoto(frame, vw, vh, taken, 0, pr, target); if (target) sessionPhotos.push(p);
+  }).catch(() => toast("사진 한 장을 저장하지 못했어요")).finally(() => {
+    frame.width = frame.height = 0; pending--; cameraBusy(); if (target) advanceHQ(target);
+  });
 };
 
 // Fallback / single best-quality shot through the iPhone camera app
 $("nativeCam").onchange = async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   sessionCount++; $("camCount").textContent = sessionCount;
-  const pr = camProject; pending++;
-  queue = queue.then(async () => { const p = await photoFromFile(f, pr, true); addToTray(thumbURL(p)); }).catch(() => toast("이 사진은 처리하지 못했어요")).finally(() => pending--);
+  const pr = camProject, target = camHQ ? { ...camHQ } : null; pending++; cameraBusy();
+  queue = queue.then(async () => { const p = await photoFromFile(f, pr, true, target); addToTray(thumbURL(p)); if (target) sessionPhotos.push(p); })
+    .catch(() => toast("이 사진은 처리하지 못했어요")).finally(() => { pending--; cameraBusy(); if (target) advanceHQ(target); });
 };
 
 document.addEventListener("visibilitychange", () => {
   if ($("cam").hidden) return;
   if (document.hidden) stopStream(); else startStream();
 });
+
+/* ---------- Headquarters collection ---------- */
+const standalone = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+const deviceId = ls.get("deviceId") || uid(); ls.set("deviceId", deviceId);
+$("hqHint").hidden = standalone;
+let hqProjects = [], statusVersion = 0, camHQ = null, sessionPhotos = [], albumHQ = null;
+let sending = false, retryTimer, retryDelay = 2000, batchDone = 0, batchTotal = 0;
+const storeId = () => hubStores.find(x => x.name === storeSel.value)?.store_id;
+const same = (a, b) => String(a) === String(b);
+async function hubFetch(path, options) {
+  const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
+  try { return await fetch(SERVER + path, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+async function loadStores() {
+  try {
+    const r = await hubFetch("/api/store-photo/stores"); if (!r.ok) throw Error();
+    const list = await r.json();
+    if (!Array.isArray(list) || !list.length || list.some(x => !x.name || x.store_id == null)) throw Error();
+    hubStores = list; ls.set("hqStores", JSON.stringify(list)); populateStores();
+  } catch {} // Cached list or the original STORES remains available for personal use.
+  refreshHQ();
+}
+async function refreshHQ() {
+  const version = ++statusVersion, id = storeId();
+  if (!standalone || id == null || !storeSel.value) { hqProjects = []; renderHQ(); return; }
+  try {
+    const r = await hubFetch(`/api/store-photo/status?${new URLSearchParams({ store_id: id, device_id: deviceId })}`);
+    if (!r.ok) throw Error();
+    const list = await r.json(); if (!Array.isArray(list)) throw Error();
+    if (version !== statusVersion) return;
+    hqProjects = list;
+    for (const remote of list) {
+      const local = projects.find(p => same(p.hqProjectId, remote.id));
+      if (local && local.name !== remote.name) { local.name = remote.name; await put("projects", local); }
+    }
+  } catch { if (version === statusVersion) hqProjects = []; }
+  if (version === statusVersion) renderHQ();
+}
+function localHQ(project) {
+  return photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) &&
+    !(project.items || []).some(i => i.uid === p.id));
+}
+function slotPhoto(project, key) {
+  return localHQ(project).filter(p => same(p.hq.slot, key)).sort((a,b) => b.ts-a.ts)[0] ||
+    (project.items || []).find(i => same(i.slot, key));
+}
+function renderHQ() {
+  const root = $("hqCards"); root.textContent = ""; root.hidden = !standalone || !storeSel.value || !hqProjects.length;
+  if (root.hidden) return;
+  for (const project of hqProjects) {
+    const card = document.createElement("section"); card.className = "hq-card";
+    const title = document.createElement("h2"); title.textContent = `본사 취합 · ${project.name}`; card.appendChild(title);
+    const count = document.createElement("p"); count.className = "hq-meta";
+    count.textContent = `우리 점포 ${project.total}장 · 이 폰 ${project.mine}장`; card.appendChild(count);
+    if (project.preset?.length) {
+      const groups = new Map();
+      for (const slot of project.preset) { if (!groups.has(slot.group)) groups.set(slot.group, []); groups.get(slot.group).push(slot); }
+      for (const [name, slots] of groups) {
+        const heading = document.createElement("h3"); heading.textContent = name || "사진"; card.appendChild(heading);
+        const grid = document.createElement("div"); grid.className = "grid";
+        for (const slot of slots) grid.appendChild(hqTile(project, slotPhoto(project, slot.key), slot));
+        card.appendChild(grid);
+      }
+    } else {
+      const grid = document.createElement("div"); grid.className = "grid";
+      const locals = localHQ(project);
+      for (const item of project.items || []) {
+        if (!locals.some(p => same(p.hq.replaceItemId, item.id))) grid.appendChild(hqTile(project, item));
+      }
+      for (const p of locals) grid.appendChild(hqTile(project, p));
+      card.appendChild(grid);
+      const shoot = document.createElement("button"); shoot.className = "chip"; shoot.textContent = "찍어서 보내기";
+      shoot.onclick = () => beginHQ(project); card.appendChild(shoot);
+      const album = document.createElement("button"); album.className = "chip"; album.textContent = "앨범에서 골라 보내기";
+      album.onclick = async () => { if (await confirmStore()) { albumHQ = { project, storeId: storeId(), storeName: storeSel.value }; $("hqLib").click(); } };
+      card.appendChild(album);
+    }
+    root.appendChild(card);
+  }
+}
+function hqTile(project, item, slot) {
+  const el = document.createElement("div"); el.className = "hq-tile"; el.tabIndex = 0; el.setAttribute("role", "button");
+  const local = !!item?.hq, requested = item?.status === "requested";
+  if (item) {
+    try { el.style.backgroundImage = `url(${JSON.stringify(local ? thumbURL(item) : new URL(item.thumb_url, SERVER).href)})`; } catch {}
+    el.classList.toggle("requested", requested); el.classList.toggle("error", !!item.sendError);
+  } else { el.classList.add("empty"); el.innerHTML = CAMPLUS; }
+  const caption = document.createElement("span"); caption.className = "hq-caption";
+  caption.textContent = [slot?.name, item?.sendError ? "못 보냄" : local ? (item.sent ? "전송됨" : "보내는 중") : requested ? `수정요청 · ${item.request_note || "사진을 교체해 주세요"}` : ""].filter(Boolean).join(" · ");
+  el.appendChild(caption); el.setAttribute("aria-label", caption.textContent || "올린 사진");
+  el.oncontextmenu = e => e.preventDefault();
+  el.onclick = () => {
+    if (item?.sendError) return toast(item.sendError);
+    if (local) return toast(item.sent ? "본사 확인 전엔 다시 못 올려요" : "보내는 중이에요");
+    if (item && !requested) return toast("본사 확인 전엔 다시 못 올려요");
+    beginHQ(project, slot, requested ? item : null);
+  };
+  el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.click(); } };
+  return el;
+}
+function confirmStore() {
+  const id = storeId();
+  if (!standalone || id == null) return Promise.resolve(false);
+  if (ls.get(`hqConfirmed:${id}`) === "yes") return Promise.resolve(true);
+  $("hqConfirmTitle").textContent = `${storeSel.value}으로 보낼까요?`; $("hqConfirm").hidden = false;
+  return new Promise(resolve => {
+    const finish = ok => { $("hqConfirm").hidden = true; if (ok) ls.set(`hqConfirmed:${id}`, "yes"); resolve(ok); };
+    $("hqYes").onclick = () => finish(true); $("hqNo").onclick = () => finish(false);
+  });
+}
+async function hqLocalProject(remote) {
+  let pr = projects.find(p => same(p.hqProjectId, remote.id));
+  if (!pr) { pr = { id:uid(), hqProjectId:remote.id, name:remote.name, day:todayKey(), ts:Date.now(), store:storeSel.value }; projects.push(pr); }
+  pr.name = remote.name; await put("projects", pr); return pr;
+}
+async function beginHQ(project, slot, replacement) {
+  if (!standalone || !(await confirmStore())) return;
+  const target = { projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot?.key ?? null, replaceItemId:replacement?.id ?? null };
+  await openCamera(await hqLocalProject(project), target);
+}
+function updateCamSlot() {
+  const project = hqProjects.find(p => same(p.id, camHQ?.projectId));
+  const slot = project?.preset?.find(s => same(s.key, camHQ?.slot));
+  $("camSlot").hidden = !camHQ; $("camSlot").textContent = camHQ ? (camHQ.replaceItemId != null ? "교체 촬영 · " : "") + (slot?.name || project?.name || "본사 취합") : "";
+}
+function cameraBusy() {
+  $("camDone").disabled = !!camHQ && !!pending;
+  if (camHQ) { $("snap").disabled = !!pending; $("nativeCam").disabled = !!pending; }
+  else { $("snap").disabled = false; $("nativeCam").disabled = false; }
+}
+function advanceHQ(target) {
+  if (!camHQ || $("cam").hidden || !sessionPhotos.some(p => same(p.hq.slot, target.slot) && same(p.hq.replaceItemId, target.replaceItemId))) return;
+  const project = hqProjects.find(p => same(p.id, target.projectId));
+  if (project && target.replaceItemId == null && !project.preset?.length) return;
+  const next = target.replaceItemId == null ? project?.preset?.find(s => !slotPhoto(project, s.key)) : null;
+  if (next) { camHQ = { ...target, slot:next.key }; updateCamSlot(); }
+  else { closeCamera(); $("hqFinish").hidden = false; }
+}
+function saveHQSession() {
+  // Called directly by the click handler, before any await, to retain iOS user activation.
+  const saving = saveList([...sessionPhotos]);
+  saving.then(() => { render(); }).catch(e => { if (e?.name !== "AbortError") toast("사진첩에 저장하지 못했어요. 개인 목록에서 다시 저장해 주세요."); });
+}
+$("hqFinishYes").onclick = () => { saveHQSession(); $("hqFinish").hidden = true; };
+$("hqFinishNo").onclick = () => { $("hqFinish").hidden = true; };
+$("hqLib").onchange = async e => {
+  const files = [...e.target.files], choice = albumHQ; e.target.value = ""; albumHQ = null;
+  if (!choice || !standalone || !files.length) return;
+  const pr = await hqLocalProject(choice.project);
+  for (const f of files) {
+    try { const p = await photoFromFile(f, pr, false, { projectId:choice.project.id, slot:null, storeId:choice.storeId, storeName:choice.storeName, replaceItemId:null }); sel.add(p.id); }
+    catch { toast("이 사진은 처리하지 못했어요"); }
+    render();
+  }
+};
+const unsentHQ = () => photos.filter(p => p.hq && !p.sent && !p.sendError);
+function showSendProgress() {
+  $("hqProgress").hidden = !standalone || !unsentHQ().length;
+  $("hqProgress").textContent = `본사로 보내는 중 ${batchDone}/${batchTotal}`;
+}
+async function sendHQ() {
+  if (!standalone || sending) return;
+  clearTimeout(retryTimer); sending = true;
+  if (!batchTotal) { batchDone = 0; batchTotal = unsentHQ().length; }
+  try {
+    while (unsentHQ().length) {
+      const p = unsentHQ()[0]; batchTotal = Math.max(batchTotal, batchDone + unsentHQ().length); showSendProgress();
+      const data = new FormData();
+      const fields = { store_id:p.hq.storeId, uid:p.id, device_id:deviceId, taken_at:new Date(p.taken).toISOString(), filename:fileName(p) };
+      if (p.hq.replaceItemId != null) fields.item_id = p.hq.replaceItemId;
+      else { fields.project_id = p.hq.projectId; if (p.hq.slot != null) fields.slot = p.hq.slot; }
+      for (const [key,value] of Object.entries(fields)) data.append(key, value);
+      data.append("photo", p.blob, fileName(p)); data.append("thumb", p.thumb, "thumb.jpg");
+      try {
+        const r = await hubFetch(`/api/store-photo/${p.hq.replaceItemId != null ? "replace" : "upload"}`, { method:"POST", body:data });
+        let result; try { result = await r.json(); } catch {}
+        if (r.status >= 400 && r.status < 500) {
+          p.sendError = result?.error || "사진을 보내지 못했어요";
+        } else if (!r.ok || !result?.ok) throw Error();
+        else p.sent = true;
+        if (photos.includes(p)) await put("photos", p);
+        batchDone++; retryDelay = 2000; render(); await refreshHQ();
+      } catch {
+        retryTimer = setTimeout(sendHQ, retryDelay); retryDelay = Math.min(60000, retryDelay * 2); return;
+      }
+    }
+    if (batchTotal && batchDone && !photos.some(p => p.hq && p.sendError)) toast("모두 보냈어요");
+    batchDone = batchTotal = 0; showSendProgress();
+  } finally { sending = false; }
+}
+window.addEventListener("online", () => { sendHQ(); refreshHQ(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { refreshHQ(); sendHQ(); } });
 
 /* ---------- Boot ---------- */
 (async () => {
@@ -659,6 +949,7 @@ document.addEventListener("visibilitychange", () => {
     navigator.storage?.persist?.().catch(() => {});
   } catch { toast("사진 보관함을 열 수 없어요. 개인정보 보호 모드를 꺼 주세요."); }
   defaultSelect(); render();
+  refreshHQ(); loadStores(); sendHQ();
 })();
 </script>
 </body>
