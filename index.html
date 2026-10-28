@@ -190,9 +190,19 @@ svg { display: block; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--dock-h) + 8px); transform: translateX(-50%); z-index: 50;
   background: var(--panel-3); color: var(--fg); padding: 10px 16px; border-radius: 999px; font-size: .88em; white-space: nowrap; box-shadow: 0 6px 24px rgba(0,0,0,.6); }
 @media (prefers-reduced-motion: reduce) { .thumb img { transition: none; } }
+/* Search sheet follows the visual viewport when the phone keyboard opens. */
+#storeSheet { bottom:auto; top:var(--search-top, 0px); height:var(--search-height, 100dvh); }
+.store-sheet { max-height:100%; min-height:0; grid-template-rows:auto auto minmax(0, 1fr) auto; }
+#storeSearch { width:100%; min-width:0; font:inherit; font-size:16px; color:var(--fg); background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; }
+.store-results { overflow-y:auto; overscroll-behavior:contain; min-height:0; max-height:55dvh; }
+.store-results h3 { color:var(--muted); font-size:.82em; margin:14px 0 6px; }
+.store-result { display:block; width:100%; text-align:left; padding:12px; border-radius:10px; }
+.store-result[aria-current="true"] { color:var(--stamp); background:var(--panel-3); }
 /* Headquarters collection */
 .hq-list, .hq-card { display:grid; gap:12px; }
 .hq-card { background:var(--panel); border-radius:18px; padding:16px; }
+.hq-card.paused { background:var(--panel-2); color:var(--muted); }
+.hq-card.paused .hq-tile { filter:grayscale(1); opacity:.55; }
 .hq-card h2, .hq-card h3 { margin:0; font-size:1.05em; }
 .hq-card h3 { font-size:.88em; color:var(--muted); }
 .hq-meta, .hq-hint, .hq-progress { color:var(--muted); font-size:.82em; margin:0; }
@@ -213,11 +223,11 @@ svg { display: block; }
 <header class="top">
   <img class="logo" src="logo.png" alt="A STORE">
   <div class="top-actions">
-    <label class="store">
-      <select id="store" aria-label="점포 선택"><option value="">점포 선택</option></select>
-      <span class="store-pill unset" id="storePill"><span id="storeName">점포 선택</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></span>
-    </label>
+    <div class="store">
+      <select id="store" aria-label="점포 선택" hidden><option value="">점포 선택</option></select>
+      <button type="button" class="store-pill unset" id="storePill" aria-haspopup="dialog"><span id="storeName">점포 선택</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>
     <button class="settings-btn" id="settingsBtn" type="button" aria-label="설정">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 15 .1.1a1.8 1.8 0 0 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 0 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 0 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3h-.2a1.8 1.8 0 0 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 0 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 0 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 0 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 0 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"/></svg>
     </button>
@@ -303,6 +313,14 @@ svg { display: block; }
   </div>
 </div>
 
+<div class="scrim" id="storeSheet" hidden>
+  <div class="sheet store-sheet" role="dialog" aria-modal="true" aria-labelledby="storeTitle">
+    <h2 id="storeTitle">점포 검색</h2>
+    <input id="storeSearch" type="search" placeholder="점포 이름 검색" aria-label="점포 이름 검색" autocomplete="off" enterkeyhint="search">
+    <div id="storeResults" class="store-results"></div>
+    <button class="chip" id="storeClose" type="button">닫기</button>
+  </div>
+</div>
 <div class="scrim" id="settingsSheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <h2 id="settingsTitle">설정</h2>
@@ -325,8 +343,8 @@ svg { display: block; }
 <div class="toast" id="toast" hidden></div>
 
 <script>
+const APP_VERSION = "2026-10-28.1"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
-const APP_VERSION_DATE = "2026.10.28";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
 "김정훈 권역":["EM가든5점","EM경기광주점","EM구로점","EM남양주점","EM다산점","EM명일점","EM목동점","EM별내점","EM여주점","EM용산점","EM이천점","EM자양점","EM창동점","EM청계천점","EM춘천점","EM하남점"],
@@ -342,7 +360,22 @@ const $ = id => document.getElementById(id);
 $("settingsBtn").onclick = () => { $("settingsSheet").hidden = false; };
 $ ("settingsClose").onclick = () => { $("settingsSheet").hidden = true; };
 $ ("settingsSheet").onclick = e => { if (e.target === $("settingsSheet")) $("settingsSheet").hidden = true; };
-$ ("appInfoBtn").onclick = () => toast(`앱 정보 · ${APP_VERSION_DATE}`);
+let appInfoTapCount = 0, appInfoTapStart = 0;
+$("appInfoBtn").onclick = () => {
+  const now = Date.now();
+  if (!appInfoTapCount || now - appInfoTapStart > 2000) { appInfoTapCount = 0; appInfoTapStart = now; }
+  appInfoTapCount++;
+  if (appInfoTapCount >= 7) {
+    appInfoTapCount = 0;
+    if (testMode) toast("이미 켜져 있어요");
+    else {
+      testMode = true; ls.set("testMode", "1"); syncTestModeSettings();
+      loadStores(); toast("테스트 모드 켜짐");
+    }
+    return;
+  }
+  toast(`앱 정보 · ${APP_VERSION}`);
+};
 $ ("adminPageBtn").onclick = () => window.open(SERVER + "/admin/store-photo", "_blank");
 const pad = n => String(n).padStart(2, "0");
 const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + "MB" : Math.round(b / 1024) + "KB";
@@ -398,7 +431,7 @@ try { hubStores = JSON.parse(ls.get("hqStores") || "[]"); if (!Array.isArray(hub
 function populateStores() {
   const selected = storeSel.value || ls.get("store") || "";
   storeSel.length = 1;
-  if (testMode && testStore) {
+  if (testMode) {
     const o = document.createElement("option"); o.value = "테스트점"; o.textContent = "🧪 테스트점"; storeSel.appendChild(o);
   }
   const groups = {};
@@ -412,10 +445,44 @@ function populateStores() {
     for (const n of names) { const o = document.createElement("option"); o.value = o.textContent = n; og.appendChild(o); }
     storeSel.appendChild(og);
   }
-  storeSel.value = selected; syncStore();
+  storeSel.value = selected; syncStore(); if (!$("storeSheet").hidden) renderStoreResults();
 }
 function syncStore() { $("storeName").textContent = storeSel.value || "점포 선택"; $("storePill").classList.toggle("unset", !storeSel.value); }
 populateStores();
+const normalizeStore = value => value.toLowerCase().replace(/\s+/g, "").replace(/일렉트로마트|sfm|stf|em|점/g, "");
+function closeStoreSearch() { $("storeSearch").blur(); $("storeSheet").hidden = true; $("storePill").focus(); }
+function renderStoreResults() {
+  const root = $("storeResults"), query = normalizeStore($("storeSearch").value);
+  root.textContent = ""; let count = 0;
+  function add(option) {
+    const button = document.createElement("button"); button.type = "button"; button.className = "store-result";
+    button.textContent = option.textContent; button.setAttribute("aria-current", String(option.value === storeSel.value));
+    button.onclick = () => { storeSel.value = option.value; storeSel.onchange(); closeStoreSearch(); };
+    root.appendChild(button); count++;
+  }
+  if (testMode) { const option = [...storeSel.options].find(o => o.value === "테스트점"); if (option) add(option); }
+  for (const group of storeSel.querySelectorAll("optgroup")) {
+    const options = [...group.children].filter(o => normalizeStore(o.value).includes(query));
+    if (!options.length) continue;
+    const heading = document.createElement("h3"); heading.textContent = group.label; root.appendChild(heading);
+    options.forEach(add);
+  }
+  if (!count) root.textContent = "찾는 점포가 없어요";
+}
+function fitStoreSheet() {
+  const viewport = window.visualViewport;
+  $("storeSheet").style.setProperty("--search-top", (viewport?.offsetTop || 0) + "px");
+  $("storeSheet").style.setProperty("--search-height", (viewport?.height || window.innerHeight) + "px");
+}
+$("storePill").onclick = () => {
+  $("storeSearch").value = ""; $("storeSheet").hidden = false; fitStoreSheet(); renderStoreResults(); $("storeSearch").focus();
+};
+$("storeSearch").oninput = renderStoreResults;
+$("storeClose").onclick = closeStoreSearch;
+$("storeSheet").onclick = e => { if (e.target === $("storeSheet")) closeStoreSearch(); };
+$("storeSheet").onkeydown = e => { if (e.key === "Escape") closeStoreSearch(); };
+window.visualViewport?.addEventListener("resize", fitStoreSheet);
+window.visualViewport?.addEventListener("scroll", fitStoreSheet);
 function syncTestModeSettings() { $("testModeStatus").hidden = !testMode; }
 syncTestModeSettings();
 $("disableTestMode").onclick = () => {
@@ -505,7 +572,7 @@ async function makePhoto(src, sw, sh, taken, before, project, hq = null) {
   const thumb = await toBlob(tc, 0.78);
   c.width = c.height = 0; tc.width = tc.height = 0;
   const p = { id: uid(), projectId: project.id, blob, thumb, w, h, before: before || 0, taken: taken.getTime(), ts: Date.now(), saved: false, store: storeSel.value };
-  if (hq) { p.hq = { ...hq }; p.sent = false; p.store = hq.storeName; }
+  if (hq) { p.hq = { ...hq }; p.sent = false; p.store = hq.storeName; if (projectPaused(hq.projectId)) p.paused = true; }
   photos.push(p); await put("photos", p);
   if (hq) { renderHQ(); sendHQ(); }
   return p;
@@ -565,6 +632,7 @@ function render() {
       if (!pr.hqProjectId) return openCamera(pr);
       const remote = hqProjects.find(x => String(x.id) === String(pr.hqProjectId));
       if (!remote || !standalone) return toast("열린 본사 취합 프로젝트에서 촬영해 주세요");
+      if (projectPaused(remote.id)) return toast("잠시 멈춤 중이에요");
       const slot = (remote.preset || []).find(x => !slotPhoto(remote, x.key));
       if (remote.preset?.length && !slot) return toast("본사 확인 전엔 다시 못 올려요");
       beginHQ(remote, slot);
@@ -580,9 +648,9 @@ function thumbEl(p) {
   el.className = "thumb" + (sel.has(p.id) ? " sel" : "");
   el.innerHTML = `<img alt="" loading="lazy" decoding="async"><span class="tick">${CHECK}</span>${p.saved ? '<span class="saved">저장됨</span>' : ""}`;
   el.querySelector("img").src = thumbURL(p);
-  if (p.sent || p.sendError) {
+  if (p.sent || p.sendError || p.paused) {
     const badge = document.createElement("span"); badge.className = "saved sent" + (p.sendError ? " send-error" : "");
-    badge.textContent = p.sendError ? "못 보냄" : "전송됨"; el.appendChild(badge);
+    badge.textContent = p.paused ? "대기 중" : p.sendError ? "못 보냄" : "전송됨"; el.appendChild(badge);
   }
   let timer, long = false;
   el.onpointerdown = () => { long = false; timer = setTimeout(() => { long = true; openViewer(p); }, 450); };
@@ -680,6 +748,7 @@ async function startStream() {
 function stopStream() { stream?.getTracks().forEach(t => t.stop()); stream = null; video.srcObject = null; }
 
 async function openCamera(pr, target = null) {
+  if (target && projectPaused(target.projectId)) return toast("잠시 멈춤 중이에요");
   camHQ = target; sessionPhotos = []; $("camDone").disabled = false;
   $("camProjName").readOnly = !!target;
   camProject = pr || await currentProject();
@@ -700,6 +769,7 @@ async function closeCamera() {
   stopStream(); $("cam").hidden = true; document.body.style.overflow = "";
   if (pending) toast("마지막 사진 정리 중…");
   await queue;
+  applyAppUpdate();
   defaultSelect(); render();
   if (sessionCount) toast(`${sessionCount}장 찍었어요 · 오늘 사진이 선택돼 있어요`);
 }
@@ -729,6 +799,7 @@ function flyToTray(src, fromRect) {
 }
 
 $("snap").onclick = () => {
+  if (camHQ && projectPaused(camHQ.projectId)) return toast("잠시 멈춤 중이에요");
   if (!stream || !video.videoWidth || (camHQ && pending)) return;
   const vw = video.videoWidth, vh = video.videoHeight, taken = new Date();
   const frame = document.createElement("canvas"); frame.width = vw; frame.height = vh;
@@ -752,6 +823,7 @@ $("snap").onclick = () => {
 // Fallback / single best-quality shot through the iPhone camera app
 $("nativeCam").onchange = async e => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  if (camHQ && projectPaused(camHQ.projectId)) return toast("잠시 멈춤 중이에요");
   sessionCount++; $("camCount").textContent = sessionCount;
   const pr = camProject, target = camHQ ? { ...camHQ } : null; pending++; cameraBusy();
   queue = queue.then(async () => { const p = await photoFromFile(f, pr, true, target); addToTray(thumbURL(p)); if (target) sessionPhotos.push(p); })
@@ -771,6 +843,14 @@ let hqProjects = [], statusVersion = 0, camHQ = null, sessionPhotos = [], albumH
 let sending = false, retryTimer, retryDelay = 2000, batchDone = 0, batchTotal = 0;
 const storeId = () => storeSel.value === "테스트점" ? testStore?.store_id : hubStores.find(x => x.name === storeSel.value)?.store_id;
 const same = (a, b) => String(a) === String(b);
+const pausedProjects = new Set();
+const projectPaused = id => pausedProjects.has(String(id));
+async function pauseProject(id) {
+  pausedProjects.add(String(id));
+  for (const p of photos.filter(p => p.hq && same(p.hq.projectId, id) && !p.sent && !p.sendError)) {
+    p.paused = true; delete p.sendError; await put("photos", p);
+  }
+}
 async function hubFetch(path, options) {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
   try { return await fetch(SERVER + path, { ...options, signal: controller.signal }); }
@@ -800,11 +880,18 @@ async function refreshHQ() {
     if (version !== statusVersion) return;
     hqProjects = list;
     for (const remote of list) {
+      if (remote.state === "paused") await pauseProject(remote.id);
+      else if (remote.state === "open") {
+        pausedProjects.delete(String(remote.id));
+        for (const p of photos.filter(p => p.hq && same(p.hq.projectId, remote.id) && p.paused)) {
+          delete p.paused; await put("photos", p);
+        }
+      }
       const local = projects.find(p => same(p.hqProjectId, remote.id));
       if (local && local.name !== remote.name) { local.name = remote.name; await put("projects", local); }
     }
   } catch { if (version === statusVersion) hqProjects = []; }
-  if (version === statusVersion) renderHQ();
+  if (version === statusVersion) { render(); updateCamSlot(); cameraBusy(); sendHQ(); }
 }
 function localHQ(project) {
   return photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) &&
@@ -817,9 +904,13 @@ function slotPhoto(project, key) {
 function renderHQ() {
   const root = $("hqCards"); root.textContent = ""; root.hidden = !standalone || !storeSel.value || !hqProjects.length;
   if (root.hidden) return;
+  if (hqProjects.some(p => projectPaused(p.id)) || photos.some(p => p.hq && same(p.hq.storeId, storeId()) && p.paused)) {
+    const notice = document.createElement("p"); notice.className = "hq-hint";
+    notice.textContent = "관리자가 프로젝트를 잠시 멈췄어요 — 다시 열리면 자동으로 보내요"; root.appendChild(notice);
+  }
   for (const project of hqProjects) {
-    const card = document.createElement("section"); card.className = "hq-card";
-    const title = document.createElement("h2"); title.textContent = `본사 취합 · ${project.name}`; card.appendChild(title);
+    const card = document.createElement("section"); card.className = "hq-card" + (projectPaused(project.id) ? " paused" : "");
+    const title = document.createElement("h2"); title.textContent = `본사 취합 · ${project.name}${projectPaused(project.id) ? " · 잠시 멈춤" : ""}`; card.appendChild(title);
     const count = document.createElement("p"); count.className = "hq-meta";
     count.textContent = `우리 점포 ${project.total}장 · 이 폰 ${project.mine}장`; card.appendChild(count);
     if (project.preset?.length) {
@@ -842,7 +933,7 @@ function renderHQ() {
       const shoot = document.createElement("button"); shoot.className = "chip"; shoot.textContent = "찍어서 보내기";
       shoot.onclick = () => beginHQ(project); card.appendChild(shoot);
       const album = document.createElement("button"); album.className = "chip"; album.textContent = "앨범에서 골라 보내기";
-      album.onclick = async () => { if (await confirmStore()) { albumHQ = { project, storeId: storeId(), storeName: storeSel.value }; $("hqLib").click(); } };
+      album.onclick = async () => { if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요"); if (await confirmStore()) { albumHQ = { project, storeId: storeId(), storeName: storeSel.value }; $("hqLib").click(); } };
       card.appendChild(album);
     }
     root.appendChild(card);
@@ -856,10 +947,11 @@ function hqTile(project, item, slot) {
     el.classList.toggle("requested", requested); el.classList.toggle("error", !!item.sendError);
   } else { el.classList.add("empty"); el.innerHTML = CAMPLUS; }
   const caption = document.createElement("span"); caption.className = "hq-caption";
-  caption.textContent = [slot?.name, item?.sendError ? "못 보냄" : local ? (item.sent ? "전송됨" : "보내는 중") : requested ? `수정요청 · ${item.request_note || "사진을 교체해 주세요"}` : ""].filter(Boolean).join(" · ");
+  caption.textContent = [slot?.name, item?.paused ? "대기 중" : item?.sendError ? "못 보냄" : local ? (item.sent ? "전송됨" : "보내는 중") : requested ? `수정요청 · ${item.request_note || "사진을 교체해 주세요"}` : ""].filter(Boolean).join(" · ");
   el.appendChild(caption); el.setAttribute("aria-label", caption.textContent || "올린 사진");
   el.oncontextmenu = e => e.preventDefault();
   el.onclick = () => {
+    if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
     if (item?.sendError) return toast(item.sendError);
     if (local) return toast(item.sent ? "본사 확인 전엔 다시 못 올려요" : "보내는 중이에요");
     if (item && !requested) return toast("본사 확인 전엔 다시 못 올려요");
@@ -884,7 +976,9 @@ async function hqLocalProject(remote) {
   pr.name = remote.name; await put("projects", pr); return pr;
 }
 async function beginHQ(project, slot, replacement) {
+  if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
   if (!standalone || !(await confirmStore())) return;
+  if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
   const target = { projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot?.key ?? null, replaceItemId:replacement?.id ?? null };
   await openCamera(await hqLocalProject(project), target);
 }
@@ -895,7 +989,7 @@ function updateCamSlot() {
 }
 function cameraBusy() {
   $("camDone").disabled = !!camHQ && !!pending;
-  if (camHQ) { $("snap").disabled = !!pending; $("nativeCam").disabled = !!pending; }
+  if (camHQ) { $("snap").disabled = !!pending || projectPaused(camHQ.projectId); $("nativeCam").disabled = !!pending || projectPaused(camHQ.projectId); }
   else { $("snap").disabled = false; $("nativeCam").disabled = false; }
 }
 function advanceHQ(target) {
@@ -916,6 +1010,7 @@ $("hqFinishNo").onclick = () => { $("hqFinish").hidden = true; };
 $("hqLib").onchange = async e => {
   const files = [...e.target.files], choice = albumHQ; e.target.value = ""; albumHQ = null;
   if (!choice || !standalone || !files.length) return;
+  if (projectPaused(choice.project.id)) return toast("잠시 멈춤 중이에요");
   const pr = await hqLocalProject(choice.project);
   for (const f of files) {
     try { const p = await photoFromFile(f, pr, false, { projectId:choice.project.id, slot:null, storeId:choice.storeId, storeName:choice.storeName, replaceItemId:null }); sel.add(p.id); }
@@ -923,7 +1018,7 @@ $("hqLib").onchange = async e => {
     render();
   }
 };
-const unsentHQ = () => photos.filter(p => p.hq && !p.sent && !p.sendError);
+const unsentHQ = () => photos.filter(p => p.hq && !p.sent && !p.sendError && !p.paused && !projectPaused(p.hq.projectId));
 function showSendProgress() {
   $("hqProgress").hidden = !standalone || !unsentHQ().length;
   $("hqProgress").textContent = `본사로 보내는 중 ${batchDone}/${batchTotal}`;
@@ -944,6 +1039,11 @@ async function sendHQ() {
       try {
         const r = await hubFetch(`/api/store-photo/${p.hq.replaceItemId != null ? "replace" : "upload"}`, { method:"POST", body:data });
         let result; try { result = await r.json(); } catch {}
+        if (r.status === 423) {
+          delete p.sendError; p.paused = true;
+          await pauseProject(p.hq.projectId);
+          render(); cameraBusy(); continue;
+        }
         if (r.status >= 400 && r.status < 500) {
           p.sendError = result?.error || "사진을 보내지 못했어요";
         } else if (!r.ok || !result?.ok) throw Error();
@@ -954,12 +1054,35 @@ async function sendHQ() {
         retryTimer = setTimeout(sendHQ, retryDelay); retryDelay = Math.min(60000, retryDelay * 2); return;
       }
     }
-    if (batchTotal && batchDone && !photos.some(p => p.hq && p.sendError)) toast("모두 보냈어요");
+    if (batchTotal && batchDone && !photos.some(p => p.hq && (p.sendError || p.paused))) toast("모두 보냈어요");
     batchDone = batchTotal = 0; showSendProgress();
-  } finally { sending = false; }
+  } finally { sending = false; applyAppUpdate(); }
 }
 window.addEventListener("online", () => { sendHQ(); refreshHQ(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { refreshHQ(); sendHQ(); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { refreshHQ(); checkAppVersion(); } });
+
+/* ---------- Fresh app version; photo data remains in IndexedDB ---------- */
+let nextAppVersion = null, checkingVersion = false;
+function applyAppUpdate() {
+  if (!nextAppVersion || !$("cam").hidden || pending || sending) return;
+  try {
+    if (sessionStorage.getItem("appReload:" + nextAppVersion)) return;
+    sessionStorage.setItem("appReload:" + nextAppVersion, "1");
+  } catch { return; } // A reload needs the session guard to avoid a cache loop.
+  location.replace(location.pathname + "?v=" + encodeURIComponent(nextAppVersion) + location.hash);
+}
+async function checkAppVersion() {
+  if (checkingVersion) return;
+  checkingVersion = true;
+  try {
+    const response = await fetch("version.json?t=" + Date.now(), { cache:"no-store" });
+    if (!response.ok) return;
+    const { v } = await response.json();
+    if (typeof v === "string" && v && v !== APP_VERSION) nextAppVersion = v;
+    applyAppUpdate();
+  } catch {} finally { checkingVersion = false; }
+}
+setInterval(() => { refreshHQ(); checkAppVersion(); }, 60000);
 
 /* ---------- Boot ---------- */
 (async () => {
@@ -969,7 +1092,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) { re
     navigator.storage?.persist?.().catch(() => {});
   } catch { toast("사진 보관함을 열 수 없어요. 개인정보 보호 모드를 꺼 주세요."); }
   defaultSelect(); render();
-  refreshHQ(); loadStores(); sendHQ();
+  checkAppVersion(); refreshHQ(); loadStores(); sendHQ();
 })();
 </script>
 </body>
