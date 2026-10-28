@@ -212,7 +212,8 @@ svg { display: block; }
 .hq-card h3 { font-size:.88em; color:var(--muted); }
 .hq-meta, .hq-hint, .hq-progress { color:var(--muted); font-size:.82em; margin:0; }
 .hq-progress { color:var(--stamp); }
-.hq-cell { min-width:0; display:grid; gap:4px; }
+.hq-extra-remove { position:absolute; top:3px; right:3px; z-index:2; width:26px; height:26px; border-radius:50%; background:var(--panel-2); color:var(--muted); }
+.hq-cell { position:relative; min-width:0; display:grid; gap:4px; }
 .hq-tile { position:relative; width:100%; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--panel-3) center/cover; display:flex; align-items:center; justify-content:center; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; cursor:pointer; }
 .hq-tile.empty { color:var(--muted); }
 .hq-tile svg { width:26px; height:26px; }
@@ -611,7 +612,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.11"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.12"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -689,7 +690,7 @@ function tx(store, mode, fn) {
     }, 10000);
   });
   return Promise.race([pending, timeout]).catch(error => {
-    uploadProgress(error?.message || "저장소 처리 실패", { flow:true });
+    uploadProgress(error?.message || "저장소 처리 실패", { flow:true, quiet:!sending && error?.message === "저장소 응답 없음" });
     throw error;
   }).finally(() => clearTimeout(timer));
 }
@@ -823,7 +824,7 @@ async function migrateLegacyPhotos() {
     try { await put("photos", p); moved++; }
     catch { uploadProgress("옛 사진 저장 실패 · 다음에 다시 옮겨요", { flow:true }); }
   }
-  if (moved) uploadProgress(`옛 사진 ${moved}장 새 방식으로 옮김`, { flow:true });
+  if (moved) uploadProgress(`옛 사진 ${moved}장 새 방식으로 옮김`, { flow:true, quiet:true });
   render();
 }
 
@@ -978,7 +979,7 @@ async function makePhoto(src, sw, sh, taken, before, project, hq = null) {
   if (hq) {
     p.hq = { ...hq }; p.sent = false; p.store = hq.storeName;
     p.hq.projectName = project.name;
-    p.hq.slotName = hqProjects.find(x => same(x.id, hq.projectId))?.preset?.find(x => same(x.key, hq.slot))?.name || "자유 촬영";
+    p.hq.slotName = hq.slotName || hqProjects.find(x => same(x.id, hq.projectId))?.preset?.find(x => same(x.key, hq.slot))?.name || "자유 촬영";
     if (projectPaused(hq.projectId)) p.paused = true;
     p.tries = 0; p.log = [{ at:Date.now(), state:p.paused ? "paused" : "waiting", msg:p.paused ? "잠시 멈춤" : "업로드 대기" }];
   }
@@ -1446,7 +1447,7 @@ async function returnRemovedSlotPhotos() {
   if (statusStore === null || !same(statusStore, storeId())) return 0;
   let moved = 0;
   for (const p of photos) {
-    if (!p.hq || p.sent || activeUpload === p.id || !same(p.hq.storeId, storeId()) || p.hq.slot == null) continue;
+    if (!p.hq || p.sent || activeUpload === p.id || !same(p.hq.storeId, storeId()) || p.hq.slot == null || p.hq.slot === "extra") continue;
     const project = hqProjects.find(x => same(x.id, p.hq.projectId));
     if (!project || activeHQSlots(project).some(slot => same(slot.key, p.hq.slot))) continue;
     await removeHQPhoto(p); moved++;
@@ -1462,6 +1463,41 @@ function slotPhoto(project, key) {
     (project.items || []).find(i => same(i.slot, key));
 }
 const activeHQSlots = project => (project.preset || []).filter(slot => !slot.deleted && !slot.deleted_at);
+function extraStorageKey(project, id = storeId()) { return `hqExtra:${id}:${project.id}`; }
+function emptyExtraKeys(project, id = storeId()) {
+  try { const keys = JSON.parse(ls.get(extraStorageKey(project, id)) || "[]"); return Array.isArray(keys) ? [...new Set(keys.filter(k => typeof k === "string"))] : []; } catch { return []; }
+}
+function saveExtraKeys(project, keys, id = storeId()) { ls.set(extraStorageKey(project, id), JSON.stringify(keys)); }
+function extraHQSlots(project) {
+  const locals = localHQ(project).filter(p => p.hq.slot === "extra");
+  const sent = (project.items || []).filter(i => i.slot === "extra").slice().sort((a,b) => String(a.uploaded_at || "").localeCompare(String(b.uploaded_at || "")));
+  const rows = sent.map(item => {
+    const replacement = locals.find(p => same(p.hq.replaceItemId, item.id));
+    return { key:"extra", extraKey:replacement?.hq.extraKey || `uploaded:${item.id}`, item:replacement || item };
+  });
+  const pending = locals.filter(p => !sent.some(i => same(p.hq.replaceItemId, i.id)));
+  const occupied = photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && p.hq.slot === "extra").map(p => p.hq.extraKey);
+  const empty = emptyExtraKeys(project).filter(key => !occupied.includes(key) && !rows.some(row => row.extraKey === key));
+  saveExtraKeys(project, empty);
+  const keys = [...new Set([...empty, ...pending.map(p => p.hq.extraKey).filter(Boolean)])].sort();
+  for (const extraKey of keys) rows.push({ key:"extra", extraKey, item:pending.find(p => p.hq.extraKey === extraKey) });
+  return rows.map((row, i) => ({ ...row, name:`추가 사진 ${i + 1}` }));
+}
+function addExtraHQSlot(project) {
+  if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
+  saveExtraKeys(project, [...emptyExtraKeys(project), uid()]); renderHQ();
+}
+function removeExtraHQSlot(project, slot) {
+  if (projectPaused(project.id) || extraHQSlots(project).find(s => s.extraKey === slot.extraKey)?.item) return;
+  saveExtraKeys(project, emptyExtraKeys(project).filter(k => k !== slot.extraKey)); renderHQ();
+}
+function extraAddTile(project) {
+  const cell = document.createElement("div"); cell.className = "hq-cell";
+  const button = document.createElement("button"); button.type = "button"; button.className = "hq-tile empty";
+  button.textContent = "+"; button.setAttribute("aria-label", "추가 사진 칸 만들기"); button.onclick = () => addExtraHQSlot(project);
+  const caption = document.createElement("span"); caption.className = "hq-caption"; caption.textContent = "추가";
+  cell.append(button, caption); return cell;
+}
 function projectPeriod(project) {
   const date = value => {
     if (!value) return null;
@@ -1512,6 +1548,9 @@ function renderHQ() {
   for (const project of visible) {
     const paused = projectPaused(project.id), active = same(selectedHQ, project.id);
     const slots = activeHQSlots(project);
+    const extras = slots.length ? extraHQSlots(project) : [];
+    const extraCount = extras.filter(slot => !!slot.item).length;
+    const extraCountText = extraCount ? ` · 추가 ${extraCount}장` : "";
     const filled = slots.filter(slot => !!slotPhoto(project, slot.key)).length;
     const waiting = sendableHQ(project.id);
     const box = document.createElement("section");
@@ -1543,11 +1582,15 @@ function renderHQ() {
       const count = document.createElement("small");
       if (slots.length) {
         const number = document.createElement("b"); number.textContent = filled;
-        count.append(number, " / " + slots.length + "칸 채움");
+        count.append(number, " / " + slots.length + "칸 채움" + extraCountText);
       } else count.textContent = (Number(project.total || 0) + localHQ(project).length) + "장";
       sectionHead.append(sectionTitle, count); box.appendChild(sectionHead);
       const slotRail = document.createElement("div"); slotRail.className = "hq-slot-rail";
-      if (slots.length) for (const slot of slots) slotRail.appendChild(hqTile(project, slotPhoto(project, slot.key), slot));
+      if (slots.length) {
+        for (const slot of slots) slotRail.appendChild(hqTile(project, slotPhoto(project, slot.key), slot));
+        for (const slot of extras) slotRail.appendChild(hqTile(project, slot.item, slot));
+        slotRail.appendChild(extraAddTile(project));
+      }
       else {
         const locals = localHQ(project);
         for (const item of project.items || []) if (!locals.some(p => same(p.hq.replaceItemId, item.id))) slotRail.appendChild(hqTile(project, item));
@@ -1571,10 +1614,10 @@ function renderHQ() {
       send.querySelector("span").textContent = paused ? "잠시 멈춤 — 다시 열리면 전송할 수 있어요" : !waiting.length ? "전송할 사진이 없어요" : sending ? `전송 중… ${batchDone}/${batchTotal}` : failed ? "다시 전송 (" + waiting.length + "장)" : "전송 (" + waiting.length + "장)";
       send.onclick = () => sendProjectHQ(project); box.appendChild(send);
       const completed = hqSuccess.get(String(project.id));
-      if (completed && !waiting.length) count.textContent = "전송 완료 " + completed + "장";
+      if (completed && !waiting.length && !slots.length) count.textContent = "전송 완료 " + completed + "장";
     } else {
       const progress = document.createElement("span"); progress.className = "hq-meta";
-      progress.textContent = slots.length ? "칸 " + filled + "/" + slots.length : (Number(project.total || 0) + localHQ(project).length) + "장";
+      progress.textContent = slots.length ? filled + " / " + slots.length + "칸 채움" + extraCountText : (Number(project.total || 0) + localHQ(project).length) + "장";
       box.appendChild(progress);
     }
     rail.appendChild(box);
@@ -1657,6 +1700,21 @@ function hqTile(project, item, slot) {
   const caption = document.createElement("span"); caption.className = "hq-caption";
   caption.textContent = slot?.name || item?.name || item?.slot || "사진";
   cell.append(el, caption); el.setAttribute("aria-label", caption.textContent + (requested ? " 수정요청" : item ? " 크게 보기" : " 채우기"));
+  if (slot?.extraKey && !item) {
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "hq-extra-remove";
+    remove.textContent = "×"; remove.setAttribute("aria-label", slot.name + " 빈칸 없애기");
+    remove.onclick = () => removeExtraHQSlot(project, slot); cell.appendChild(remove);
+    let hold, start, suppressedUntil = 0;
+    const cancel = () => clearTimeout(hold);
+    el.onpointerdown = e => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      start = { x:e.clientX, y:e.clientY };
+      hold = setTimeout(() => { suppressedUntil = Date.now() + 800; removeExtraHQSlot(project, slot); }, 550);
+    };
+    el.onpointermove = e => { if (start && Math.hypot(e.clientX-start.x, e.clientY-start.y) > 8) cancel(); };
+    el.onpointerup = el.onpointercancel = el.onpointerleave = cancel;
+    el.addEventListener("click", e => { if (Date.now() < suppressedUntil) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  }
   el.oncontextmenu = e => e.preventDefault();
   const request = requested ? item : local && item.hq.replaceItemId != null ? (project.items || []).find(i => same(i.id, item.hq.replaceItemId)) : null;
   if (request && !item?.sent) el.classList.add("requested");
@@ -1717,7 +1775,7 @@ async function movePhotoToSlot(photo, cell) {
     if (oldHQ) await removeHQPhoto(old);
     const replacement = old?.status === "requested" ? old : oldHQ && oldHQ.hq.replaceItemId != null ? (project.items || []).find(i => same(i.id, oldHQ.hq.replaceItemId)) : null;
     photo.hq = { projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot.key,
-      slotName:slot.name, projectName:project.name, replaceItemId:replacement?.id ?? null };
+      extraKey:slot.extraKey, slotName:slot.name, projectName:project.name, replaceItemId:replacement?.id ?? null };
     photo.store = storeSel.value; photo.sent = false; delete photo.sendError; delete photo.retryable; delete photo.paused;
     photo.tries = 0; photo.log = [{ at:Date.now(), state:"waiting", msg:"업로드 대기" }];
     sel.delete(photo.id); await put("photos", photo); hqSuccess.delete(String(project.id)); render();
@@ -1803,6 +1861,10 @@ $("hqPickCancel").onclick = () => { $("hqPick").hidden = true; hqSlotChoice = nu
 $("hqPick").onclick = e => { if (e.target === $("hqPick")) $("hqPickCancel").click(); };
 async function removeHQPhoto(p) {
   if (!p?.hq || p.sent || activeUpload === p.id) return;
+  if (p.hq.slot === "extra" && p.hq.extraKey) {
+    const project = { id:p.hq.projectId }, id = p.hq.storeId;
+    saveExtraKeys(project, [...new Set([...emptyExtraKeys(project, id), p.hq.extraKey])], id);
+  }
   delete p.hq; delete p.sent; delete p.paused; delete p.sendError; delete p.retryable; delete p.log; delete p.tries;
   await put("photos", p);
 }
@@ -1813,7 +1875,7 @@ async function receiveHQSlot(event, fromCamera) {
   try {
     const project = await hqLocalProject(choice.project);
     const target = { projectId:choice.project.id, storeId:storeId(), storeName:storeSel.value,
-      slot:choice.slot?.key ?? null, replaceItemId:choice.replacement?.id ?? choice.previous?.hq?.replaceItemId ?? null };
+      slot:choice.slot?.key ?? null, extraKey:choice.slot?.extraKey, slotName:choice.slot?.name, replaceItemId:choice.replacement?.id ?? choice.previous?.hq?.replaceItemId ?? null };
     await photoFromFile(file, project, fromCamera, target);
     if (choice.previous) await removeHQPhoto(choice.previous);
     hqSuccess.delete(String(choice.project.id)); render();
@@ -1835,11 +1897,11 @@ function sendNotice(msg) { uploadProgress(msg, { flow:true }); toast(msg); }
 const sendingNotice = () => `보내는 중이에요 (${batchDone}/${batchTotal}장)`;
 async function sendProjectHQ(project, reason = "버튼") {
   const list = sendableHQ(project.id);
-  uploadProgress(`전송 버튼 누름 · 대기 ${list.length}장 · sending=${sending ? "예" : "아니오"}`, { flow:true });
+  uploadProgress(`전송 버튼 누름 · 대기 ${list.length}장 · sending=${sending ? "예" : "아니오"}`, { flow:true, quiet:true });
   if (sending) return sendNotice(sendingNotice());
   if (projectPaused(project.id)) return sendNotice("잠시 멈춤 중이에요");
   if (!list.length) return sendNotice("보낼 사진이 없어요");
-  if (!(await confirmHQSend(project, list.length))) return uploadProgress("전송 취소", { flow:true });
+  if (!(await confirmHQSend(project, list.length))) return uploadProgress("전송 취소", { flow:true, quiet:true });
   if (sending) return sendNotice(sendingNotice());
   if (projectPaused(project.id)) return sendNotice("잠시 멈춤 중이에요");
   // Persist retry flags inside the guarded upload round, rather than before it.
@@ -1867,13 +1929,13 @@ async function beginHQ(project, slot, replacement) {
   if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
   if (!standalone || !(await confirmStore())) return;
   if (projectPaused(project.id)) return toast("잠시 멈춤 중이에요");
-  const target = { projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot?.key ?? null, replaceItemId:replacement?.id ?? null };
+  const target = { projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot?.key ?? null, extraKey:slot?.extraKey, slotName:slot?.name, replaceItemId:replacement?.id ?? null };
   await openCamera(await hqLocalProject(project), target);
 }
 function updateCamSlot() {
   const project = hqProjects.find(p => same(p.id, camHQ?.projectId));
   const slot = project?.preset?.find(s => same(s.key, camHQ?.slot));
-  $("camSlot").hidden = !camHQ; $("camSlot").textContent = camHQ ? (camHQ.replaceItemId != null ? "교체 촬영 · " : "") + (slot?.name || project?.name || "본사 취합") : "";
+  $("camSlot").hidden = !camHQ; $("camSlot").textContent = camHQ ? (camHQ.replaceItemId != null ? "교체 촬영 · " : "") + (camHQ.slotName || slot?.name || project?.name || "본사 취합") : "";
 }
 function cameraBusy() {
   $("camDone").disabled = !!camHQ && !!pending;
@@ -1884,8 +1946,8 @@ function advanceHQ(target) {
   if (!camHQ || $("cam").hidden || !sessionPhotos.some(p => same(p.hq.slot, target.slot) && same(p.hq.replaceItemId, target.replaceItemId))) return;
   const project = hqProjects.find(p => same(p.id, target.projectId));
   if (project && target.replaceItemId == null && !activeHQSlots(project).length) return;
-  const next = target.replaceItemId == null ? activeHQSlots(project).find(s => !slotPhoto(project, s.key)) : null;
-  if (next) { camHQ = { ...target, slot:next.key }; updateCamSlot(); }
+  const next = target.replaceItemId == null && target.slot !== "extra" ? activeHQSlots(project).find(s => !slotPhoto(project, s.key)) : null;
+  if (next) { camHQ = { ...target, slot:next.key, extraKey:undefined, slotName:next.name }; updateCamSlot(); }
   else { closeCamera(); $("hqFinish").hidden = false; }
 }
 function saveHQSession() {
@@ -1910,20 +1972,21 @@ let activeUpload = null, logProject = null, logFilter = "all";
 let stripTimer;
 let flowLog = [];
 try { const saved = JSON.parse(ls.get("hqFlowLog") || "[]"); if (Array.isArray(saved)) flowLog = saved.filter(x => x && typeof x.msg === "string" && Number.isFinite(x.at)).slice(-30); } catch {}
-function uploadProgress(msg, { flow = false, finished = false } = {}) {
-  if (!standalone && !flow) return;
+function uploadProgress(msg, { flow = false, finished = false, quiet = false } = {}) {
+  if (!standalone && !flow && !quiet) return;
+  if (flow || quiet) { flowLog = [...flowLog, { at:Date.now(), msg }].slice(-30); ls.set("hqFlowLog", JSON.stringify(flowLog)); renderLog(); }
+  if (quiet) return;
   clearTimeout(stripTimer);
   $("uploadStripText").textContent = msg; $("uploadStrip").hidden = false;
-  if (flow) { flowLog = [...flowLog, { at:Date.now(), msg }].slice(-30); ls.set("hqFlowLog", JSON.stringify(flowLog)); renderLog(); }
   stripTimer = setTimeout(() => { $("uploadStrip").hidden = true; }, 4000);
 }
 async function resumeUploads() {
   await photoMigration;
-  if (!standalone) return uploadProgress("전송 재개 대기 · 홈 화면 앱이 아니에요", { flow:true });
-  if (statusStore === null || !same(statusStore, storeId())) return uploadProgress("전송 재개 대기 · 가게 상태를 아직 받지 못했어요", { flow:true });
+  if (!standalone) return uploadProgress("전송 재개 대기 · 홈 화면 앱이 아니에요", { flow:true, quiet:true });
+  if (statusStore === null || !same(statusStore, storeId())) return uploadProgress("전송 재개 대기 · 가게 상태를 아직 받지 못했어요", { flow:true, quiet:true });
   notifyMissingHQ();
   const list = unsentHQ();
-  if (!list.length) return uploadProgress("전송 재개 대기 · 보낼 사진이 없어요", { flow:true });
+  if (!list.length) return uploadProgress("전송 재개 대기 · 보낼 사진이 없어요", { flow:true, quiet:true });
   if (sending) return uploadProgress(sendingNotice(), { flow:true });
   const msg = `앱을 다시 열었어요 — 전송 대기 ${list.length}장`;
   if (!photos.some(missingHQ) && Date.now() >= slotMoveNoticeUntil) uploadProgress(msg, { flow:true });
@@ -1940,7 +2003,7 @@ async function recordSend(p, state, msg, show = true) {
   p.log = [...(p.log || []), { at:Date.now(), state, msg }].slice(-10);
   if (photos.includes(p)) {
     try { await put("photos", p); }
-    catch { uploadProgress("진행 기록 저장 실패 · 전송은 계속", { flow:true }); }
+    catch { uploadProgress("진행 기록 저장 실패 · 전송은 계속", { flow:true, quiet:true }); }
   }
   renderLog(); updateCounts();
 }
@@ -2023,7 +2086,7 @@ function renderLog() {
 async function retryHQ(list) {
   const project = hqProjects.find(x => list.some(p => p.hq && !p.sent && same(p.hq.storeId, storeId()) && !missingHQ(p) && same(p.hq.projectId, x.id)));
   if (project) { selectedHQ = project.id; renderHQ(); await sendProjectHQ(project, "다시 보내기"); }
-  else uploadProgress("다시 보내기 · 보낼 사진이 없어요", { flow:true });
+  else uploadProgress("다시 보내기 · 보낼 사진이 없어요", { flow:true, quiet:true });
 }
 $("uploadBtn").onclick = () => retryHQ(photos.filter(p => p.hq && !p.sent));
 let successCount = 0, successTimer, batchSuccess = 0;
@@ -2048,7 +2111,7 @@ async function sendHQ(projectId, reason) {
   if (!batchTotal) { batchDone = 0; batchTotal = unsentHQ(projectId).length; }
   sending = true;
   renderHQ();
-  uploadProgress(`전송 시작 · 이유=${reason} · 대기 ${unsentHQ(projectId).length}장`, { flow:true });
+  uploadProgress(`전송 시작 · 이유=${reason} · 대기 ${unsentHQ(projectId).length}장`, { flow:true, quiet:true });
   const run = ++uploadRun;
   let endReason = "완료";
   const retry = () => {
@@ -2132,7 +2195,7 @@ async function sendHQ(projectId, reason) {
         watchdog = setTimeout(() => {
           ++uploadRound; ++uploadRun; activeUpload = null; sending = false;
           renderHQ();
-          uploadProgress("전송 끝 · 이유=30초 감시", { flow:true });
+          uploadProgress("전송 끝 · 이유=30초 감시", { flow:true, quiet:true });
           p.sent = false; p.sendError = "응답이 없어 멈췄어요 · 다시 보내 주세요"; p.retryable = true;
           uploadProgress(p.sendError, { flow:true }); sendNotice("전송이 멈춰서 다시 시도할게요");
           void put("photos", p).catch(() => {});
@@ -2157,7 +2220,7 @@ async function sendHQ(projectId, reason) {
     if (run === uploadRun) {
       activeUpload = null; sending = false;
       renderHQ();
-      uploadProgress(`전송 끝 · 이유=${endReason}`, { flow:true });
+      uploadProgress(`전송 끝 · 이유=${endReason}`, { flow:true, quiet:true });
       renderLog(); updateCounts(); applyAppUpdate();
     }
   }
