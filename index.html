@@ -151,6 +151,23 @@ svg { display: block; }
 .cam-count { justify-self: center; font-family: var(--mono); font-size: .9em; color: var(--muted); text-align: center; line-height: 1.2; }
 .cam-count b { display: block; color: var(--fg); font-size: 1.5em; font-family: var(--font); }
 .done { justify-self: center; padding: 12px 22px; border-radius: 999px; background: var(--stamp); color: #000; font-weight: 800; }
+/* Landscape: video fills the left, controls move to a column on the right (like the iPhone camera) */
+@media (orientation: landscape) and (max-height: 600px) {
+  .cam { grid-template-columns: 1fr auto; grid-template-rows: 1fr; }
+  .viewport { grid-column: 1; grid-row: 1; }
+  .cam-top { position: absolute; top: 0; left: 0; right: 120px; padding: calc(var(--st) + 8px) 8px 8px var(--gutter); }
+  .cam-proj { max-width: 340px; }
+  .cam-bottom { grid-column: 2; grid-row: 1; width: calc(112px + env(safe-area-inset-right, 0px)); min-height: 0;
+    padding: calc(var(--st) + 8px) max(10px, env(safe-area-inset-right, 0px)) calc(var(--sb) + 8px) 10px;
+    display: flex; flex-direction: column; gap: 10px; background: #000; }
+  .tray { flex: 1; min-height: 0; flex-direction: column; align-items: center; overflow-x: hidden; overflow-y: auto; }
+  .tray .hint { font-size: .72em; text-align: center; }
+  .cam-ctrl { grid-template-columns: none; grid-template-rows: auto auto auto; justify-items: center; gap: 10px; }
+  .cam-count { display: flex; gap: 3px; align-items: baseline; } .cam-count b { display: inline; font-size: 1.25em; }
+  .shutter { width: 70px; height: 70px; } .shutter i { width: 56px; height: 56px; }
+  .done { padding: 9px 18px; }
+  .res { left: auto; right: 10px; }
+}
 .flyer { position: fixed; z-index: 30; object-fit: cover; pointer-events: none; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
 
 /* Sheet + viewer + toast */
@@ -589,7 +606,7 @@ $("camClose").onclick = closeCamera;
 function addToTray(src) {
   const tray = $("tray"); tray.querySelector(".hint")?.remove();
   const im = document.createElement("img"); im.src = src; im.alt = ""; tray.appendChild(im);
-  tray.scrollTo({ left: tray.scrollWidth, behavior: "smooth" });
+  tray.scrollTo({ left: tray.scrollWidth, top: tray.scrollHeight, behavior: "smooth" });
   return im;
 }
 function flyToTray(src, fromRect) {
