@@ -112,6 +112,7 @@ svg { display: block; }
 .thumb.sel img { transform: scale(.9); border-radius: 8px; }
 .thumb .saved { position: absolute; left: 6px; bottom: 6px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.6); color: var(--ok); }
 .thumb.pending img { opacity: .4; }
+.thumb .hq-deleted { position:absolute; top:6px; left:6px; z-index:2; padding:2px 5px; border-radius:5px; background:rgba(0,0,0,.8); color:#ffb4ae; font-size:11px; font-weight:700; pointer-events:none; }
 
 .emptylist { padding: 26px 18px; border-radius: 16px; background: var(--panel); display: grid; gap: 10px; }
 .emptylist ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); }
@@ -440,7 +441,7 @@ body.hq-expanded .hq-slot-page .hq-note { position:absolute; bottom:18px; left:4
 .my-photos-heading { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:11px; white-space:nowrap; }
 .my-photos-heading .chip { padding:7px 8px; font-size:11px; }
 .my-photos-heading .vault-actions { font-size:11px; gap:6px; }
-.my-photos-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; align-content:start; overflow-y:auto; min-height:0; overscroll-behavior:contain; border-radius:0; }
+.my-photos-grid { justify-content:start; justify-items:stretch; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; align-content:start; overflow-y:auto; min-height:0; overscroll-behavior:contain; border-radius:0; }
 .my-photos-grid .thumb { border-radius:10px; }
 .my-photos-hint { margin:0; color:var(--muted); font-size:10px; text-align:center; white-space:nowrap; }
 @media (prefers-reduced-motion:reduce) { .my-photos-sheet { animation:none; } }
@@ -455,7 +456,7 @@ body.hq-expanded #hqCards:has(.hq-project-chips) { grid-template-rows:36px minma
 .hq-project-chip[aria-current="true"] { background:var(--stamp); color:#000; font-weight:700; }
 .hq-sent { flex:none; min-width:0; margin-top:4px; }
 .hq-sent-title { margin:0 0 3px; color:var(--muted); font-size:10px; }
-.hq-sent-rail { display:flex; gap:6px; overflow-x:auto; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:none; }
+.hq-sent-rail { display:flex; justify-content:flex-start; gap:6px; overflow-x:auto; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:none; }
 .hq-sent-rail .hq-cell { flex:0 0 var(--hq-sent-tile, 64px); width:var(--hq-sent-tile, 64px); gap:2px; scroll-snap-align:start; }
 .hq-sent-rail .hq-tile { width:100%; height:auto; aspect-ratio:1; border-radius:7px; }
 .hq-sent-rail .hq-caption { font-size:9px; line-height:12px; max-height:12px; -webkit-line-clamp:1; }
@@ -1117,6 +1118,15 @@ function render() {
   }
   updateCounts(); renderHQ(); renderMyPhotos(); renderLog();
 }
+function photoTime(p) {
+  for (const value of [p.taken, p.taken_at, p.ts, p.uploaded_at, p.created_at]) {
+    if (value == null || value === "") continue;
+    const time = typeof value === "number" ? value : Date.parse(value);
+    if (Number.isFinite(time)) return time;
+  }
+  return 0;
+}
+function oldestPhotoFirst(a, b) { return photoTime(a) - photoTime(b); }
 function thumbEl(p) {
   const el = document.createElement("div");
   el.className = "thumb" + (sel.has(p.id) ? " sel" : "");
@@ -1126,6 +1136,10 @@ function thumbEl(p) {
   if (!p.hq && !p.saved && !p.broken) {
     const badge = document.createElement("span"); badge.className = "unsaved";
     badge.textContent = "미저장"; el.appendChild(badge);
+  }
+  if (!p.hq && p.hqDeleted) {
+    const badge = document.createElement("span"); badge.className = "hq-deleted";
+    badge.textContent = "본사 삭제됨"; el.appendChild(badge);
   }
   if (p.sent || p.sendError || p.paused) {
     const badge = document.createElement("span"); badge.className = "saved sent" + (p.sendError ? " send-error" : "");
@@ -1171,7 +1185,7 @@ function openMyPhotos(target = null) {
 }
 function renderMyPhotos() {
   if ($("myPhotosSheet").hidden) return;
-  const personal = photos.filter(p => !p.hq).sort((a,b) => b.ts - a.ts);
+  const personal = photos.filter(p => !p.hq).sort(oldestPhotoFirst);
   const head = $("myPhotosTitle"), grid = $("myPhotosGrid"), scroll = grid.scrollTop;
   head.textContent = ""; grid.textContent = "";
   $("myPhotosImport").hidden = !!myPhotosTarget;
@@ -1563,7 +1577,7 @@ async function loadStores() {
 }
 async function refreshHQ() {
   const version = ++statusVersion, id = storeId();
-  let moved = 0;
+  let moved = 0, detached = 0;
   statusStore = null;
   if (!standalone || id == null || !storeSel.value) { hqProjects = []; renderHQ(); return; }
   try {
@@ -1610,7 +1624,8 @@ async function detachDeletedHQPhotos(list, id) {
       hqSuccess.delete(String(remote.id));
       sessionPhotos = sessionPhotos.filter(x => x !== p);
       if (viewHQ?.item === p) $("vClose").click();
-      delete p.hq; delete p.sent; delete p.paused; delete p.sendError; delete p.retryable; delete p.log; delete p.tries;
+      p.hqDeleted = { at:Date.now(), projectId:remote.id, storeId:id, uid:p.hq.uid || p.id };
+      delete p.hq; delete p.sent; delete p.sentAt; delete p.paused; delete p.sendError; delete p.retryable; delete p.log; delete p.tries;
       detached.push(p);
     }
   }
@@ -1630,6 +1645,26 @@ async function returnRemovedSlotPhotos() {
     await removeHQPhoto(p); moved++;
   }
   return moved;
+}
+function sentHQItems(project) {
+  const deleted = new Set((project.deleted_uids || []).map(String));
+  const detached = new Set(photos.filter(p => !p.hq && p.hqDeleted && same(p.hqDeleted.projectId, project.id) &&
+    same(p.hqDeleted.storeId, storeId())).map(p => String(p.hqDeleted.uid || p.id)));
+  const allowed = item => !deleted.has(String(item.hq?.uid || item.uid || item.id)) &&
+    !detached.has(String(item.hq?.uid || item.uid || item.id));
+  const remote = (project.items || []).filter(allowed);
+  const authoritative = statusStore !== null && same(statusStore, storeId()) && Array.isArray(project.items);
+  const local = photos.filter(p => p.hq && p.sent && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) && allowed(p))
+    .filter(p => !remote.some(i => same(i.uid, p.hq.uid || p.id)))
+    .filter(p => {
+      const sentAt = p.sentAt || p.log?.findLast(entry => entry.state === "complete")?.at || 0;
+      return !authoritative || activeUpload === p.id || (sentAt > 0 && Date.now() - sentAt < 120000);
+    });
+  return [...remote, ...local].sort((a, b) => {
+    const source = item => photos.find(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) &&
+      same(p.hq.uid || p.id, item.uid)) || item;
+    return oldestPhotoFirst(a.taken_at ? a : source(a), b.taken_at ? b : source(b));
+  });
 }
 function localHQ(project) {
   return photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) &&
@@ -1813,7 +1848,7 @@ function renderHQ() {
       sectionHead.append(sectionTitle, count); box.appendChild(sectionHead);
       const slotRail = document.createElement("div"); slotRail.className = "hq-slot-rail";
       const isSent = item => !!item && (!item.hq || item.sent);
-      const sentRows = [...(project.items || []), ...localHQ(project).filter(p => p.sent)].map(item => ({
+      const sentRows = sentHQItems(project).map(item => ({
         item,
         slot: item.slot === "extra" || item.hq?.slot === "extra"
           ? extras.find(slot => slot.item === item || same(slot.item?.hq?.replaceItemId, item.id))
@@ -2006,13 +2041,14 @@ function updateDragPosition(drag) {
 async function movePhotoToSlot(photo, cell) {
   if (photo.broken || !(photo.blob instanceof Blob) || dropState(cell) === "invalid") return;
   const project = cell._hqProject, slot = cell._hqSlot, old = cell._hqItem;
-  const previous = { hq:photo.hq, sent:photo.sent, store:photo.store, log:photo.log };
+  const previous = { hq:photo.hq, hqDeleted:photo.hqDeleted, sentAt:photo.sentAt, sent:photo.sent, store:photo.store, log:photo.log };
   const oldHQ = old?.hq ? { hq:old.hq, sent:old.sent, store:old.store, log:old.log } : null;
   try {
     if (oldHQ) await removeHQPhoto(old);
     const replacement = old?.status === "requested" ? old : oldHQ && oldHQ.hq.replaceItemId != null ? (project.items || []).find(i => same(i.id, oldHQ.hq.replaceItemId)) : null;
     photo.hq = { uid:uid(), projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot.key,
       extraKey:slot.extraKey, slotName:slot.name, projectName:project.name, replaceItemId:replacement?.id ?? null };
+    delete photo.hqDeleted; delete photo.sentAt;
     photo.store = storeSel.value; photo.sent = false; delete photo.sendError; delete photo.retryable; delete photo.paused;
     photo.tries = 0; photo.log = [{ at:Date.now(), state:"waiting", msg:"업로드 대기" }];
     sel.delete(photo.id); await put("photos", photo); hqSuccess.delete(String(project.id)); render();
@@ -2437,7 +2473,7 @@ async function sendHQ(projectId, reason) {
           } else if (!r.ok || !result?.ok) throw Error(result?.error || `서버 응답 오류 ${r.status}`);
           else {
             // The server has accepted this uid; phone storage must not undo success.
-            p.sent = true;
+            p.sent = true; p.sentAt = Date.now();
             p.log = [...(p.log || []), { at:Date.now(), state:"complete", msg:`✓ 업로드 완료 (${batchDone + 1}/${batchTotal})` }].slice(-10);
             delete p.paused; delete p.sendError; delete p.retryable;
             pendingSentSaves.add(p); void saveSent(p);
