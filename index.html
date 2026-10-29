@@ -366,6 +366,8 @@ body.hq-expanded .hq-summary.open-glow::after { border-radius:18px; background:#
 .hq-slot-rail .hq-tile.empty { display:grid; place-items:center; border:1.5px dashed #ffb43a66; background:#ffb43a0d; color:var(--stamp); }
 .hq-tile-empty { display:grid; justify-items:center; gap:2px; font-size:10.5px; }
 .hq-tile-empty svg { width:24px; height:24px; stroke-width:1.9; }
+.hq-tile-empty.named { width:100%; min-width:0; padding:6px; text-align:center; }
+.hq-empty-title { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; text-overflow:ellipsis; overflow-wrap:anywhere; max-width:100%; max-height:2.4em; font-size:15px; font-weight:700; line-height:1.2; color:var(--stamp); }
 .hq-tile .hq-mag { width:32px; height:32px; border-radius:50%; background:#0008; display:grid; place-items:center; }
 .hq-tile .hq-mag svg { width:19px; height:19px; }
 .hq-tile-status { position:absolute; top:6px; left:6px; padding:3px 7px; border-radius:10px; background:#000a; color:var(--stamp); font-size:10.5px; font-weight:700; line-height:1.3; }
@@ -459,7 +461,9 @@ body.hq-expanded #hqCards:has(.hq-project-chips) { grid-template-rows:36px minma
 .hq-sent-rail .hq-caption { font-size:9px; line-height:12px; max-height:12px; -webkit-line-clamp:1; }
 .hq-sent-rail .hq-mag, .hq-sent-rail .hq-tile-status { display:none; }
 .hq-sent-rail .hq-tile.requested { box-shadow:inset 0 0 0 2px var(--stamp); }
-.hq-sent-rail .hq-note { position:absolute; bottom:14px; left:2px; right:2px; background:#000b; color:var(--stamp); font-size:8px; line-height:12px; text-align:center; }
+body.hq-expanded .hq-sent { border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:9px 0; }
+body.hq-expanded .hq-request-band { position:absolute; top:50%; left:0; right:0; transform:translateY(-50%); z-index:3; padding:4px 2px; background:rgba(0,0,0,.65); color:var(--stamp); font-size:13px; font-weight:800; line-height:17px; text-align:center; pointer-events:none; }
+body.hq-expanded .hq-request-memo { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:400; line-height:14px; }
 .hq-all-sent { margin:2px 0; text-align:center; color:var(--muted); font-size:12px; flex:none; }
 /* Browser-only home screen installation gate */
 body.install-required { overflow:hidden; }
@@ -1850,8 +1854,6 @@ function renderHQ() {
         const sentRail = document.createElement("div"); sentRail.className = "hq-sent-rail";
         for (const { item, slot } of sentRows) {
           const cell = hqTile(project, item, slot);
-          const note = cell.querySelector(".hq-note");
-          if (note) { note.title = note.textContent; note.textContent = "수정요청"; }
           cell.querySelector(".hq-tile").onclick = () => {
             openHQViewer(project, item, slot);
             if (item.status === "requested") {
@@ -1919,6 +1921,11 @@ function hqTile(project, item, slot) {
   }
   const caption = document.createElement("span"); caption.className = "hq-caption";
   caption.textContent = slot?.name || item?.name || item?.slot || "사진";
+  if (!item && slot && !slot.extraKey) {
+    const empty = el.querySelector(".hq-tile-empty"), title = document.createElement("strong");
+    empty.classList.add("named"); title.className = "hq-empty-title"; title.textContent = caption.textContent;
+    empty.insertBefore(title, empty.lastElementChild); caption.hidden = true;
+  }
   cell.append(el, caption); el.setAttribute("aria-label", caption.textContent + (requested ? " 수정요청" : item ? " 크게 보기" : " 채우기"));
   if (slot?.extraKey && !item) {
     const remove = document.createElement("button"); remove.type = "button"; remove.className = "hq-extra-remove";
@@ -1939,7 +1946,17 @@ function hqTile(project, item, slot) {
   const request = requested ? item : local && item.hq.replaceItemId != null ? (project.items || []).find(i => same(i.id, item.hq.replaceItemId)) : null;
   if (request && !item?.sent) el.classList.add("requested");
   if (request?.request_note || requested) {
-    const note = document.createElement("span"); note.className = "hq-note"; note.textContent = `수정요청: ${request?.request_note || "사진을 교체해 주세요"}`; cell.appendChild(note);
+    const note = document.createElement("span");
+    if (document.body.classList.contains("hq-expanded")) {
+      note.className = "hq-request-band"; note.textContent = "수정요청";
+      if (request?.request_note) {
+        const memo = document.createElement("span"); memo.className = "hq-request-memo";
+        memo.textContent = request.request_note; memo.title = request.request_note; note.appendChild(memo);
+      }
+      el.appendChild(note);
+    } else {
+      note.className = "hq-note"; note.textContent = `수정요청: ${request?.request_note || "사진을 교체해 주세요"}`; cell.appendChild(note);
+    }
   }
   if (item && !item.broken && !requested) {
     const status = document.createElement("span");
