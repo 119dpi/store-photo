@@ -466,6 +466,20 @@ body.hq-expanded .hq-sent { border-top:1px solid var(--line); border-bottom:1px 
 body.hq-expanded .hq-request-band { position:absolute; top:50%; left:0; right:0; transform:translateY(-50%); z-index:3; padding:4px 2px; background:rgba(0,0,0,.65); color:var(--stamp); font-size:13px; font-weight:800; line-height:17px; text-align:center; pointer-events:none; }
 body.hq-expanded .hq-request-memo { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:400; line-height:14px; }
 .hq-all-sent { margin:2px 0; text-align:center; color:var(--muted); font-size:12px; flex:none; }
+/* Store notes stay on this phone; only headquarters receives submissions. */
+.hq-store-note { flex:none; min-width:0; font-size:12px; }
+.hq-store-note summary { cursor:pointer; padding:7px 0; color:var(--muted); overflow-wrap:anywhere; }
+.hq-store-note textarea { display:block; width:100%; min-width:0; box-sizing:border-box; resize:vertical; font:inherit; font-size:16px; line-height:1.4; color:var(--fg); background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:9px; }
+.hq-store-note textarea:focus-visible { outline:2px solid var(--stamp); }
+.hq-store-note-count { text-align:right; margin:3px 0; color:var(--muted); font-variant-numeric:tabular-nums; }
+.hq-store-note-count.over { color:var(--err); }
+.hq-store-note-status { display:block; color:var(--muted); margin:3px 0; }
+.hq-store-note-send { padding:8px 12px; border-radius:10px; background:var(--panel-3); font-weight:600; }
+.hq-store-note-send:disabled { opacity:.4; cursor:default; }
+body.hq-expanded .hq-card-content { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+body.hq-expanded .hq-card-content:has(.hq-store-note[open]) { overflow-y:auto; overscroll-behavior-y:contain; }
+body.hq-expanded .hq-card-content:has(.hq-store-note[open]) > * { flex-shrink:0; }
+body.hq-expanded .hq-card-content:has(.hq-store-note[open]) .hq-slot-rail { min-height:var(--hq-grid-height, 130px); }
 /* Browser-only home screen installation gate */
 body.install-required { overflow:hidden; }
 body.install-required #appSurface { pointer-events:none; user-select:none; filter:blur(5px) brightness(.35); }
@@ -677,7 +691,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.16"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.17"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -1545,17 +1559,17 @@ async function pauseProject(id, current = () => true) {
     p.paused = true; delete p.sendError; await recordSend(p, "paused", "관리자가 프로젝트를 잠시 멈췄어요 — 다시 열리면 이어서 보냅니다");
   }
 }
-async function hubFetch(path, options) {
+async function hubFetch(path, options, timeoutMs = 20000, notifyError = true) {
   const controller = new AbortController();
   let timer;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => {
       reject(new DOMException("응답 시간 초과", "AbortError")); controller.abort();
-    }, 20000);
+    }, timeoutMs);
   });
   try {
     const response = await Promise.race([fetch(SERVER + path, { ...options, signal:controller.signal }), timeout]);
-    if (!response.ok && options?.method === "POST") sendNotice(`서버 응답 오류 ${response.status}`);
+    if (notifyError && !response.ok && options?.method === "POST") sendNotice(`서버 응답 오류 ${response.status}`);
     // Read the body under the same deadline, even if headers arrived immediately.
     const body = await Promise.race([response.text(), timeout]);
     return { ok:response.ok, status:response.status, json:async () => JSON.parse(body) };
@@ -1731,6 +1745,16 @@ function fitHQRail() {
   if (!active) return;
   rail.style.height = "100%";
   for (const slotRail of rail.querySelectorAll(".hq-slot-rail")) {
+    const content = slotRail.parentElement;
+    let reserved = 0;
+    for (const child of content.children) {
+      if (child === slotRail) continue;
+      const style = getComputedStyle(child);
+      if (style.display === "none") continue;
+      const height = child.matches(".hq-store-note") ? child.querySelector("summary").getBoundingClientRect().height : child.getBoundingClientRect().height;
+      reserved += height + parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+    }
+    slotRail.style.setProperty("--hq-grid-height", `${Math.max(130, content.clientHeight - reserved)}px`);
     // Reserve half a two-column tile before measuring the remaining grid height.
     slotRail.closest(".hq-summary").style.setProperty("--hq-sent-tile", `${Math.max(1, (slotRail.clientWidth - 10) / 4)}px`);
     layoutHQSlotPages(slotRail);
@@ -1760,6 +1784,92 @@ function layoutHQSlotPages(rail) {
 }
 const hqCardSize = typeof ResizeObserver === "function" ? new ResizeObserver(fitHQRail) : null;
 window.addEventListener("resize", fitHQRail);
+const hqNotes = new Map();
+function hqNoteState(id, projectId) {
+  const key = `hqNote:${id}:${projectId}`;
+  if (!hqNotes.has(key)) {
+    let saved;
+    try { saved = JSON.parse(ls.get(key) || "null"); } catch {}
+    hqNotes.set(key, {
+      key, draft:typeof saved?.draft === "string" ? saved.draft : "",
+      sent:typeof saved?.sent === "string" ? saved.sent : "",
+      sentAt:typeof saved?.sentAt === "string" ? saved.sentAt : "",
+      open:false, sending:false, deleted:!!saved?.deleted
+    });
+  }
+  return hqNotes.get(key);
+}
+function saveHQNote(state) {
+  ls.set(state.key, JSON.stringify({ draft:state.draft, sent:state.sent, sentAt:state.sentAt, deleted:state.deleted }));
+}
+function hqNoteTime(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function hqStoreNote(project) {
+  const id = storeId(), state = hqNoteState(id, project.id);
+  const locked = () => project.state !== "open" || projectPaused(project.id) ||
+    !hqProjects.some(p => same(p.id, project.id) && p.state === "open");
+  const details = document.createElement("details"); details.className = "hq-store-note"; details.open = state.open;
+  const summary = document.createElement("summary");
+  const input = document.createElement("textarea"); input.rows = 4; input.value = state.draft;
+  input.placeholder = "본사에만 보이는 메모예요 (예: 진열대 공사 중이라 정면 사진은 11/1에)";
+  input.setAttribute("aria-label", "본사에 보낼 특이사항");
+  const count = document.createElement("p"); count.className = "hq-store-note-count";
+  const status = document.createElement("small"); status.className = "hq-store-note-status"; status.setAttribute("aria-live", "polite");
+  const send = document.createElement("button"); send.type = "button"; send.className = "hq-store-note-send";
+  const update = () => {
+    const length = Array.from(state.draft).length;
+    summary.textContent = state.sentAt ? `📝 특이사항 · ${state.deleted ? "지웠어요 ✓" : "보냄 ✓"} ${hqNoteTime(state.sentAt)}` : "📝 특이사항 적기";
+    count.textContent = `${length} / 500`; count.classList.toggle("over", length > 500);
+    input.readOnly = locked();
+    send.disabled = state.sending || locked() || length > 500 || id == null;
+    send.textContent = state.sending ? "보내는 중…" : "특이사항 보내기";
+    status.textContent = state.draft !== state.sent ? "고친 뒤 안 보냄" : state.sentAt ? state.deleted ? "지웠어요 ✓" : `보냄 ✓ ${hqNoteTime(state.sentAt)}` : "";
+    status.hidden = !status.textContent;
+  };
+  input.oninput = () => { state.draft = input.value; saveHQNote(state); update(); };
+  details.ontoggle = () => {
+    const opened = details.open && !state.open;
+    state.open = details.open; fitHQRail();
+    if (opened) requestAnimationFrame(() => {
+      if (!details.isConnected || !details.open) return;
+      const content = details.closest(".hq-card-content");
+      if (!content) return;
+      const field = input.getBoundingClientRect(), viewport = content.getBoundingClientRect();
+      const delta = field.bottom > viewport.bottom ? field.bottom - viewport.bottom : field.top < viewport.top ? field.top - viewport.top : 0;
+      content.scrollTo({ top:content.scrollTop + delta, behavior:"smooth" });
+    });
+  };
+  send.onclick = async () => {
+    if (state.sending || locked() || id == null || Array.from(state.draft).length > 500) return;
+    const submitted = state.draft;
+    const data = new FormData();
+    for (const [key, value] of Object.entries({ store_id:id, project_id:project.id, device_id:deviceId, note:submitted })) data.append(key, value);
+    state.sending = true; update();
+    try {
+      const response = await hubFetch("/api/store-photo/note", { method:"POST", body:data }, 10000, false);
+      if (response.status === 404) {
+        sendNotice("아직 Hub가 특이사항을 받을 준비가 안 됐어요"); return;
+      }
+      const result = await response.json();
+      if (!response.ok || !result?.ok) throw Error("note failed");
+      state.sent = result.deleted ? "" : submitted;
+      state.deleted = !!result.deleted;
+      state.sentAt = typeof result.updated_at === "string" && !Number.isNaN(Date.parse(result.updated_at)) ? result.updated_at : new Date().toISOString();
+      // Keep any newer edits made while the request was in flight.
+      if (result.deleted && state.draft === submitted) state.draft = "";
+      saveHQNote(state);
+      sendNotice(result.deleted ? "지웠어요 ✓" : `보냄 ✓ ${hqNoteTime(state.sentAt)}`);
+    } catch {
+      sendNotice("특이사항을 보내지 못했어요 · 다시 눌러 주세요");
+    } finally {
+      state.sending = false; input.value = state.draft; update();
+      if (!details.isConnected) renderHQ();
+    }
+  };
+  details.append(summary, input, count, status, send); update(); return details;
+}
 function renderHQ() {
   retrySentSaves();
   cardVisibility?.disconnect();
@@ -1901,6 +2011,7 @@ function renderHQ() {
         }
         sent.append(title, sentRail); box.appendChild(sent);
       }
+      if (!paused && project.state === "open") box.appendChild(hqStoreNote(project));
       const failed = waiting.some(p => p.sendError);
       const send = document.createElement("button"); send.type = "button"; send.className = "hq-send" + (failed ? " retry" : "");
       send.disabled = !waiting.length || paused;
@@ -1913,6 +2024,11 @@ function renderHQ() {
       const progress = document.createElement("span"); progress.className = "hq-meta";
       progress.textContent = slots.length ? filled + " / " + slots.length + "칸 채움" + extraCountText : (Number(project.total || 0) + localHQ(project).length) + "장";
       box.appendChild(progress);
+    }
+    if (expanded) {
+      const content = document.createElement("div"); content.className = "hq-card-content";
+      content.append(...[...box.children].filter(child => !child.classList.contains("hq-sparks")));
+      box.appendChild(content);
     }
     rail.appendChild(box);
   }
