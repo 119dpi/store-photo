@@ -672,7 +672,7 @@ body.install-required #appSurface { pointer-events:none; user-select:none; filte
 </section>
 
 <script>
-const APP_VERSION = "2026-10-28.15"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
+const APP_VERSION = "2026-10-28.16"; // 배포할 때 version.json의 v도 같은 값으로 함께 올려 주세요.
 const SERVER = "https://astorehub-1.tail73148e.ts.net";
 const STORES = {"브랜디드":["EM세종점","EM연수점","SFM일산점","일렉트로마트STF고양","일렉트로마트STF수원","일렉트로마트STF안성","EM전주점","EM영등포점","EM왕십리점","일렉트로마트STF하남","EM강릉점","SFM월계점","EM은평점","SFM죽전점","EM김해점","EM신제주점","EM진주점","EM창원점","EM만촌점","EM해운대점","EM목포점","EM월배점"],
 "김성순 권역":["EM검단점","EM광명소하점","EM대전터미널점","EM둔산점","EM산본점","EM서수원점","EM수원점","EM수지점","EM안산고잔점","EM안양점","EM오산점","EM익산점","EM중동점","EM천안서북점","EM천안점","EM청주점","EM평촌점","EM평택점","EM풍산점","SFM군산점","SFM동탄점"],
@@ -871,7 +871,7 @@ async function markPhotoUnreadable(p, showToast = false) {
   render();
 }
 async function migrateLegacyPhotos() {
-  let moved = 0;
+  let moved = 0, detached = 0;
   for (const p of photos.filter(p => legacyPhotos.has(p))) {
     try { await readPhotoBlob(p.blob); }
     catch { await markPhotoUnreadable(p); continue; }
@@ -1568,6 +1568,7 @@ async function refreshHQ() {
     const list = await r.json(); if (!Array.isArray(list)) throw Error();
     if (version !== statusVersion) return;
     hqProjects = list; statusStore = id;
+    detached = await detachDeletedHQPhotos(list, id);
     moved = await returnRemovedSlotPhotos();
     for (const remote of list) {
       if (remote.state === "paused") await pauseProject(remote.id);
@@ -1587,7 +1588,33 @@ async function refreshHQ() {
       slotMoveNoticeUntil = Date.now() + 4000;
       uploadProgress(`관리자가 칸을 바꿔서 사진 ${moved}장을 보관함으로 옮겼어요 — 내 사진에서 골라 칸에 넣어 주세요`, { flow:true });
     }
+    if (detached) {
+      slotMoveNoticeUntil = Date.now() + 4000;
+      uploadProgress(`본사에서 지운 사진 ${detached}장이 칸에서 빠졌어요 · 다시 올릴 수 있어요`, { flow:true });
+    }
   }
+}
+async function detachDeletedHQPhotos(list, id) {
+  const detached = [];
+  for (const remote of list) {
+    if (!Array.isArray(remote.deleted_uids)) continue;
+    const deleted = new Set(remote.deleted_uids.map(String));
+    for (const p of photos) {
+      if (!p.hq || !same(p.hq.storeId, id) || !same(p.hq.projectId, remote.id) || !deleted.has(String(p.hq.uid || p.id))) continue;
+      if (activeUpload === p.id) activeUpload = null;
+      pendingSentSaves.delete(p);
+      hqSuccess.delete(String(remote.id));
+      sessionPhotos = sessionPhotos.filter(x => x !== p);
+      if (viewHQ?.item === p) $("vClose").click();
+      delete p.hq; delete p.sent; delete p.paused; delete p.sendError; delete p.retryable; delete p.log; delete p.tries;
+      detached.push(p);
+    }
+  }
+  for (const p of detached) {
+    try { await put("photos", p); }
+    catch { uploadProgress("진행 기록 저장 실패 · 전송은 계속", { flow:true, quiet:true }); }
+  }
+  return detached.length;
 }
 async function returnRemovedSlotPhotos() {
   if (statusStore === null || !same(statusStore, storeId())) return 0;
@@ -1602,7 +1629,7 @@ async function returnRemovedSlotPhotos() {
 }
 function localHQ(project) {
   return photos.filter(p => p.hq && same(p.hq.projectId, project.id) && same(p.hq.storeId, storeId()) &&
-    !(project.items || []).some(i => i.uid === p.id));
+    !(project.items || []).some(i => i.uid === (p.hq.uid || p.id)));
 }
 function slotPhoto(project, key) {
   return localHQ(project).filter(p => same(p.hq.slot, key)).sort((a,b) => b.ts-a.ts)[0] ||
@@ -1967,7 +1994,7 @@ async function movePhotoToSlot(photo, cell) {
   try {
     if (oldHQ) await removeHQPhoto(old);
     const replacement = old?.status === "requested" ? old : oldHQ && oldHQ.hq.replaceItemId != null ? (project.items || []).find(i => same(i.id, oldHQ.hq.replaceItemId)) : null;
-    photo.hq = { projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot.key,
+    photo.hq = { uid:uid(), projectId:project.id, storeId:storeId(), storeName:storeSel.value, slot:slot.key,
       extraKey:slot.extraKey, slotName:slot.name, projectName:project.name, replaceItemId:replacement?.id ?? null };
     photo.store = storeSel.value; photo.sent = false; delete photo.sendError; delete photo.retryable; delete photo.paused;
     photo.tries = 0; photo.log = [{ at:Date.now(), state:"waiting", msg:"업로드 대기" }];
@@ -2344,8 +2371,8 @@ async function sendHQ(projectId, reason) {
   try {
     while (unsentHQ(projectId).length) {
       retrySentSaves();
-      const p = unsentHQ(projectId)[0], round = ++uploadRound;
-      const current = () => run === uploadRun && round === uploadRound;
+      const p = unsentHQ(projectId)[0], round = ++uploadRound, assignment = p.hq;
+      const current = () => run === uploadRun && round === uploadRound && p.hq === assignment;
       let watchdog;
       const work = async () => {
         activeUpload = p.id; p.tries = (p.tries || 0) + 1; delete p.sendError; delete p.retryable;
@@ -2364,7 +2391,7 @@ async function sendHQ(projectId, reason) {
           if (!current()) return;
           renderHQ(); showSendProgress(projectId);
           const data = new FormData();
-          const fields = { store_id:p.hq.storeId, uid:p.id, device_id:deviceId, taken_at:new Date(p.taken).toISOString(), filename:fileName(p) };
+          const fields = { store_id:p.hq.storeId, uid:p.hq.uid || p.id, device_id:deviceId, taken_at:new Date(p.taken).toISOString(), filename:fileName(p) };
           if (p.hq.replaceItemId != null) fields.item_id = p.hq.replaceItemId;
           else { fields.project_id = p.hq.projectId; if (p.hq.slot != null) fields.slot = p.hq.slot; }
           for (const [key,value] of Object.entries(fields)) data.append(key, value);
@@ -2416,6 +2443,7 @@ async function sendHQ(projectId, reason) {
       };
       const timeout = new Promise(resolve => {
         watchdog = setTimeout(() => {
+          if (!current()) { resolve(); return; }
           ++uploadRound; ++uploadRun; activeUpload = null; sending = false;
           renderHQ();
           uploadProgress("전송 끝 · 이유=30초 감시", { flow:true, quiet:true });
